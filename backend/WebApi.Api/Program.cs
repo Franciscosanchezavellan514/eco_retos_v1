@@ -50,6 +50,8 @@ builder.Services.AddScoped<PlantaRepository>();
 builder.Services.AddScoped<IPlantaService, PlantaService>();
 builder.Services.AddScoped<JardinRepository>();
 builder.Services.AddScoped<IJardinService, JardinService>();
+builder.Services.AddScoped<TriviaRepository>();
+builder.Services.AddScoped<ITriviaService, TriviaService>();
 
 // Configuración de autenticación JWT
 var jwtKey = builder.Configuration["Jwt:Key"]!;

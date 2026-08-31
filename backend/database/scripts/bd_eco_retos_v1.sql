@@ -736,3 +736,219 @@ BEGIN
     WHERE js.UsuarioId = @UsuarioId;
 END
 GO
+
+
+USE EcoRetosDB;
+GO
+
+INSERT INTO CategoriasTrivia (Nombre, Grupo, Dificultad)
+VALUES ('Reciclaje Básico', 'A', 'Facil');
+GO
+
+
+
+USE EcoRetosDB;
+GO
+
+DECLARE @CategoriaId INT = (SELECT CategoriaId FROM CategoriasTrivia WHERE Nombre = 'Reciclaje Básico');
+
+-- Pregunta 1
+INSERT INTO Preguntas (CategoriaId, Enunciado)
+VALUES (@CategoriaId, '¿De qué color es normalmente el contenedor para plástico?');
+
+DECLARE @Pregunta1Id INT = SCOPE_IDENTITY();
+
+INSERT INTO OpcionesPregunta (PreguntaId, Texto, EsCorrecta)
+VALUES
+    (@Pregunta1Id, 'Amarillo', 1),
+    (@Pregunta1Id, 'Verde', 0),
+    (@Pregunta1Id, 'Rojo', 0);
+
+-- Pregunta 2
+INSERT INTO Preguntas (CategoriaId, Enunciado)
+VALUES (@CategoriaId, '¿Cuánto tarda una botella de plástico en degradarse aproximadamente?');
+
+DECLARE @Pregunta2Id INT = SCOPE_IDENTITY();
+
+INSERT INTO OpcionesPregunta (PreguntaId, Texto, EsCorrecta)
+VALUES
+    (@Pregunta2Id, '1 año', 0),
+    (@Pregunta2Id, '450 años', 1),
+    (@Pregunta2Id, '10 años', 0);
+GO
+
+
+
+
+USE EcoRetosDB;
+GO
+
+CREATE OR ALTER PROCEDURE sp_Trivia_ListarCategorias
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    SELECT CategoriaId, Nombre, Grupo, Dificultad
+    FROM CategoriasTrivia;
+END
+GO
+
+
+
+USE EcoRetosDB;
+GO
+
+CREATE OR ALTER PROCEDURE sp_Trivia_ListarPreguntas
+    @CategoriaId INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    SELECT
+        p.PreguntaId,
+        p.Enunciado,
+        o.OpcionId,
+        o.Texto
+        -- Nota: a propósito NO incluimos "EsCorrecta" aquí,
+        -- el cliente (Flutter) nunca debe recibir cuál es la respuesta correcta
+    FROM Preguntas p
+    INNER JOIN OpcionesPregunta o ON o.PreguntaId = p.PreguntaId
+    WHERE p.CategoriaId = @CategoriaId
+      AND p.Activo = 1
+    ORDER BY p.PreguntaId, o.OpcionId;
+END
+GO
+
+
+
+USE EcoRetosDB;
+GO
+
+CREATE OR ALTER PROCEDURE sp_Trivia_Responder
+    @UsuarioId            INT,
+    @PreguntaId           INT,
+    @OpcionSeleccionadaId INT,
+    @PuntosPorAcierto     INT = 10  -- valor fijo por pregunta, ajustable
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SET XACT_ABORT ON;
+
+    DECLARE @EsCorrecta BIT;
+    DECLARE @EsPrimerIntento BIT;
+    DECLARE @PuntosOtorgados INT = 0;
+
+    -- Verificar si esta es la primera vez que el usuario responde esta pregunta
+    SET @EsPrimerIntento = CASE
+        WHEN EXISTS (SELECT 1 FROM TriviaAttempts WHERE UsuarioId = @UsuarioId AND PreguntaId = @PreguntaId)
+        THEN 0 ELSE 1
+    END;
+
+    -- Verificar si la opción elegida es la correcta
+    SELECT @EsCorrecta = EsCorrecta
+    FROM OpcionesPregunta
+    WHERE OpcionId = @OpcionSeleccionadaId AND PreguntaId = @PreguntaId;
+
+    IF @EsCorrecta IS NULL
+    BEGIN
+        SELECT -1 AS Resultado, 0 AS PuntosOtorgados; -- la opción no pertenece a esa pregunta
+        RETURN;
+    END
+
+    BEGIN TRANSACTION;
+
+    -- Solo se otorgan puntos si es correcta Y es el primer intento
+    IF @EsCorrecta = 1 AND @EsPrimerIntento = 1
+    BEGIN
+        SET @PuntosOtorgados = @PuntosPorAcierto;
+        UPDATE Usuarios SET Puntos = Puntos + @PuntosOtorgados WHERE UsuarioId = @UsuarioId;
+    END
+
+    INSERT INTO TriviaAttempts (UsuarioId, PreguntaId, OpcionSeleccionadaId, EsCorrecta, RewardGranted, RewardedAt)
+    VALUES (
+        @UsuarioId, @PreguntaId, @OpcionSeleccionadaId, @EsCorrecta,
+        CASE WHEN @PuntosOtorgados > 0 THEN 1 ELSE 0 END,
+        CASE WHEN @PuntosOtorgados > 0 THEN SYSUTCDATETIME() ELSE NULL END
+    );
+
+    COMMIT TRANSACTION;
+
+    SELECT 1 AS Resultado, @EsCorrecta AS EsCorrecta, @PuntosOtorgados AS PuntosOtorgados;
+END
+GO
+
+
+USE EcoRetosDB;
+GO
+
+CREATE OR ALTER PROCEDURE sp_Trivia_ActualizarMejorPuntaje
+    @UsuarioId   INT,
+    @CategoriaId INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    -- Cuenta cuántas preguntas de esta categoría ha acertado el usuario
+    DECLARE @PuntajeActual INT;
+
+    SELECT @PuntajeActual = COUNT(*)
+    FROM TriviaAttempts ta
+    INNER JOIN Preguntas p ON p.PreguntaId = ta.PreguntaId
+    WHERE ta.UsuarioId = @UsuarioId
+      AND p.CategoriaId = @CategoriaId
+      AND ta.EsCorrecta = 1;
+
+    IF EXISTS (SELECT 1 FROM ResultadosTrivia WHERE UsuarioId = @UsuarioId AND CategoriaId = @CategoriaId)
+    BEGIN
+        UPDATE ResultadosTrivia
+        SET MejorPuntaje = @PuntajeActual
+        WHERE UsuarioId = @UsuarioId AND CategoriaId = @CategoriaId
+          AND @PuntajeActual > MejorPuntaje; -- solo actualiza si mejoró
+    END
+    ELSE
+    BEGIN
+        INSERT INTO ResultadosTrivia (UsuarioId, CategoriaId, MejorPuntaje)
+        VALUES (@UsuarioId, @CategoriaId, @PuntajeActual);
+    END
+END
+GO
+
+
+
+
+USE EcoRetosDB;
+GO
+
+CREATE OR ALTER PROCEDURE sp_Trivia_ActualizarMejorPuntaje
+    @UsuarioId   INT,
+    @CategoriaId INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    DECLARE @PuntajeActual INT;
+
+    SELECT @PuntajeActual = COUNT(DISTINCT ta.PreguntaId)
+    FROM TriviaAttempts ta
+    INNER JOIN Preguntas p ON p.PreguntaId = ta.PreguntaId
+    WHERE ta.UsuarioId = @UsuarioId
+      AND p.CategoriaId = @CategoriaId
+      AND ta.EsCorrecta = 1;
+
+    IF EXISTS (SELECT 1 FROM ResultadosTrivia WHERE UsuarioId = @UsuarioId AND CategoriaId = @CategoriaId)
+    BEGIN
+        UPDATE ResultadosTrivia
+        SET MejorPuntaje = @PuntajeActual
+        WHERE UsuarioId = @UsuarioId AND CategoriaId = @CategoriaId;
+    END
+    ELSE
+    BEGIN
+        INSERT INTO ResultadosTrivia (UsuarioId, CategoriaId, MejorPuntaje)
+        VALUES (@UsuarioId, @CategoriaId, @PuntajeActual);
+    END
+END
+GO
+
+EXEC sp_Trivia_ActualizarMejorPuntaje @UsuarioId = 4, @CategoriaId = 1;
+
+SELECT * FROM ResultadosTrivia WHERE UsuarioId = 4;
