@@ -1,4 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
+using System.Security.Claims;
 using Services.WebApi.Interface;
 using WebApi.Model.DTOs;
 
@@ -53,5 +55,25 @@ public class UsuariosController : ControllerBase
     {
         _usuarioService.Logout(dto.RefreshToken);
         return Ok(new { mensaje = "Sesión cerrada correctamente." });
+    }
+
+    [Authorize]
+    [HttpGet("me")]
+    public IActionResult Me()
+    {
+        var usuarioId = User.FindFirst("UsuarioId")?.Value;
+        var uid = User.FindFirst("UID")?.Value;
+        var nombreUsuario = User.FindFirst(ClaimTypes.Name)?.Value;
+        var email = User.FindFirst(ClaimTypes.Email)?.Value;
+        var esAdmin = User.FindFirst("EsAdmin")?.Value;
+
+        return Ok(new
+        {
+            UsuarioId = usuarioId,
+            UID = uid,
+            NombreUsuario = nombreUsuario,
+            Email = email,
+            EsAdmin = esAdmin
+        });
     }
 }
