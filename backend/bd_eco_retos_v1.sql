@@ -242,3 +242,20 @@ BEGIN
     SELECT SCOPE_IDENTITY() AS UsuarioId;
 END
 GO
+
+
+--Procedimiento almacenado para buscar por email
+CREATE OR ALTER PROCEDURE sp_Usuario_ObtenerPorEmail
+    @Email NVARCHAR(150)
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    SELECT UsuarioId, UID, NombreUsuario, Email, PasswordHash,
+           FechaRegistro, UltimaConexion, RachaActual, Puntos, Monedas,
+           EsAdmin, Activo
+    FROM Usuarios
+    WHERE Email = @Email;
+END
+GO
+

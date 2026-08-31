@@ -21,4 +21,17 @@ public class UsuariosController : ControllerBase
         var nuevoId = _usuarioService.Registrar(dto);
         return Ok(new { UsuarioId = nuevoId });
     }
+
+    [HttpPost("login")]
+    public IActionResult Login([FromBody] LoginDto dto)
+    {
+        var resultado = _usuarioService.Login(dto);
+
+        if (resultado == null)
+        {
+            return Unauthorized(new { mensaje = "Email o contraseña incorrectos." });
+        }
+
+        return Ok(resultado);
+    }
 }
