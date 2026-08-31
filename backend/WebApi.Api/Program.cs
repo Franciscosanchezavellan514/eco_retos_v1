@@ -42,6 +42,8 @@ builder.Services.AddScoped<UsuarioRepository>();
 builder.Services.AddScoped<RefreshTokenRepository>();
 builder.Services.AddScoped<IUsuarioService, UsuarioService>();
 builder.Services.AddScoped<JwtService>();
+builder.Services.AddScoped<AmistadRepository>();
+builder.Services.AddScoped<IAmistadService, AmistadService>();
 
 // Configuración de autenticación JWT
 var jwtKey = builder.Configuration["Jwt:Key"]!;

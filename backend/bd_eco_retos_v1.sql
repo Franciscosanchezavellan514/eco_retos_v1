@@ -367,3 +367,103 @@ BEGIN
     WHERE UsuarioId = @UsuarioId;
 END
 GO
+
+
+--Buscar usuario por UID (necesario antes de poder agregar a alguien)
+USE EcoRetosDB;
+GO
+
+CREATE OR ALTER PROCEDURE sp_Usuario_ObtenerPorUID
+    @UID CHAR(9)
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    SELECT UsuarioId, UID, NombreUsuario, Email, Activo
+    FROM Usuarios
+    WHERE UID = @UID;
+END
+GO
+
+
+--solicitud amistad
+USE EcoRetosDB;
+GO
+
+CREATE OR ALTER PROCEDURE sp_Amistad_CrearSolicitud
+    @UsuarioSolicitanteId INT,
+    @UsuarioReceptorId    INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    -- Evita duplicar una solicitud si ya existe en cualquier dirección
+    IF EXISTS (
+        SELECT 1 FROM Amistades
+        WHERE (UsuarioSolicitanteId = @UsuarioSolicitanteId AND UsuarioReceptorId = @UsuarioReceptorId)
+           OR (UsuarioSolicitanteId = @UsuarioReceptorId AND UsuarioReceptorId = @UsuarioSolicitanteId)
+    )
+    BEGIN
+        SELECT -1 AS AmistadId; -- código especial: ya existe una relación entre estos usuarios
+        RETURN;
+    END
+
+    INSERT INTO Amistades (UsuarioSolicitanteId, UsuarioReceptorId, Estado)
+    VALUES (@UsuarioSolicitanteId, @UsuarioReceptorId, 'Pendiente');
+
+    SELECT SCOPE_IDENTITY() AS AmistadId;
+END
+GO
+
+
+
+--sp_Amistad_Responder
+USE EcoRetosDB;
+GO
+
+CREATE OR ALTER PROCEDURE sp_Amistad_Responder
+    @AmistadId        INT,
+    @UsuarioReceptorId INT,   -- para verificar que quien responde es el receptor real
+    @NuevoEstado      VARCHAR(20)  -- 'Aceptada' o 'Rechazada'
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    UPDATE Amistades
+    SET Estado = @NuevoEstado,
+        FechaRespuesta = SYSUTCDATETIME()
+    WHERE AmistadId = @AmistadId
+      AND UsuarioReceptorId = @UsuarioReceptorId
+      AND Estado = 'Pendiente';
+
+    SELECT @@ROWCOUNT AS FilasAfectadas;
+END
+GO
+
+
+
+--sp_Amistad_ListarAmigos
+USE EcoRetosDB;
+GO
+
+CREATE OR ALTER PROCEDURE sp_Amistad_ListarAmigos
+    @UsuarioId INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    SELECT
+        u.UsuarioId,
+        u.UID,
+        u.NombreUsuario,
+        a.FechaRespuesta AS FechaDesdeQueSonAmigos
+    FROM Amistades a
+    INNER JOIN Usuarios u
+        ON u.UsuarioId = CASE
+                            WHEN a.UsuarioSolicitanteId = @UsuarioId THEN a.UsuarioReceptorId
+                            ELSE a.UsuarioSolicitanteId
+                          END
+    WHERE (a.UsuarioSolicitanteId = @UsuarioId OR a.UsuarioReceptorId = @UsuarioId)
+      AND a.Estado = 'Aceptada';
+END
+GO
