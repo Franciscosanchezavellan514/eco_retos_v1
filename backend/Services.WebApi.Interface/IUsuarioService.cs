@@ -1,8 +1,8 @@
-using WebApi.Model;
+using WebApi.Model.DTOs;
 
 namespace Services.WebApi.Interface;
 
 public interface IUsuarioService
 {
-    int Registrar(Usuario usuario);
+    int Registrar(RegistroUsuarioDto dto);
 }

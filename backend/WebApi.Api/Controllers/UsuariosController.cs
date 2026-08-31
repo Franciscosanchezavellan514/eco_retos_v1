@@ -1,6 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using Services.WebApi.Interface;
-using WebApi.Model;
+using WebApi.Model.DTOs;
 
 namespace WebApi.Api.Controllers;
 
@@ -16,9 +16,9 @@ public class UsuariosController : ControllerBase
     }
 
     [HttpPost("registrar")]
-    public IActionResult Registrar([FromBody] Usuario usuario)
+    public IActionResult Registrar([FromBody] RegistroUsuarioDto dto)
     {
-        var nuevoId = _usuarioService.Registrar(usuario);
+        var nuevoId = _usuarioService.Registrar(dto);
         return Ok(new { UsuarioId = nuevoId });
     }
 }
