@@ -221,3 +221,24 @@ CREATE TABLE UsuarioInsignias (
     PRIMARY KEY (UsuarioId, InsigniaId)
 );
 GO
+
+
+
+
+--procedimientos
+
+CREATE OR ALTER PROCEDURE sp_Usuario_Registrar
+    @UID            CHAR(9),
+    @NombreUsuario  NVARCHAR(50),
+    @Email          NVARCHAR(150),
+    @PasswordHash   NVARCHAR(255)
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    INSERT INTO Usuarios (UID, NombreUsuario, Email, PasswordHash)
+    VALUES (@UID, @NombreUsuario, @Email, @PasswordHash);
+
+    SELECT SCOPE_IDENTITY() AS UsuarioId;
+END
+GO
