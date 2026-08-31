@@ -262,3 +262,328 @@ BEGIN
 END
 GO
 
+
+--Procedimiento almacenado para crear refresh token
+USE EcoRetosDB;
+GO
+
+CREATE OR ALTER PROCEDURE sp_RefreshToken_Crear
+    @UsuarioId       INT,
+    @TokenHash       VARCHAR(255),
+    @FechaExpiracion DATETIME2
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    INSERT INTO RefreshTokens (UsuarioId, TokenHash, FechaExpiracion)
+    VALUES (@UsuarioId, @TokenHash, @FechaExpiracion);
+END
+GO
+
+
+USE EcoRetosDB;
+GO
+
+CREATE OR ALTER PROCEDURE sp_RefreshToken_ObtenerValido
+    @TokenHash VARCHAR(255)
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    SELECT RefreshTokenId, UsuarioId, TokenHash, FechaCreacion, FechaExpiracion, Revocado
+    FROM RefreshTokens
+    WHERE TokenHash = @TokenHash
+      AND Revocado = 0
+      AND FechaExpiracion > SYSUTCDATETIME();
+END
+GO
+
+USE EcoRetosDB;
+GO
+
+CREATE OR ALTER PROCEDURE sp_RefreshToken_Revocar
+    @TokenHash VARCHAR(255)
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    UPDATE RefreshTokens
+    SET Revocado = 1
+    WHERE TokenHash = @TokenHash;
+END
+GO
+
+
+
+--Procedimiento para obtener un refresh token válido (no revocado, no expirado)
+USE EcoRetosDB;
+GO
+
+CREATE OR ALTER PROCEDURE sp_RefreshToken_ObtenerValido
+    @TokenHash VARCHAR(255)
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    SELECT RefreshTokenId, UsuarioId, TokenHash, FechaCreacion, FechaExpiracion, Revocado
+    FROM RefreshTokens
+    WHERE TokenHash = @TokenHash
+      AND Revocado = 0
+      AND FechaExpiracion > SYSUTCDATETIME();
+END
+GO
+
+--Procedimiento para revocar un refresh token (usado en logout y en rotation)
+USE EcoRetosDB;
+GO
+
+CREATE OR ALTER PROCEDURE sp_RefreshToken_Revocar
+    @TokenHash VARCHAR(255)
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    UPDATE RefreshTokens
+    SET Revocado = 1
+    WHERE TokenHash = @TokenHash;
+END
+GO
+
+
+--Stored procedure para buscar por ID
+USE EcoRetosDB;
+GO
+
+CREATE OR ALTER PROCEDURE sp_Usuario_ObtenerPorId
+    @UsuarioId INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    SELECT UsuarioId, UID, NombreUsuario, Email, PasswordHash,
+           FechaRegistro, UltimaConexion, RachaActual, Puntos, Monedas,
+           EsAdmin, Activo
+    FROM Usuarios
+    WHERE UsuarioId = @UsuarioId;
+END
+GO
+
+
+--Buscar usuario por UID (necesario antes de poder agregar a alguien)
+USE EcoRetosDB;
+GO
+
+CREATE OR ALTER PROCEDURE sp_Usuario_ObtenerPorUID
+    @UID CHAR(9)
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    SELECT UsuarioId, UID, NombreUsuario, Email, Activo
+    FROM Usuarios
+    WHERE UID = @UID;
+END
+GO
+
+
+--solicitud amistad
+USE EcoRetosDB;
+GO
+
+CREATE OR ALTER PROCEDURE sp_Amistad_CrearSolicitud
+    @UsuarioSolicitanteId INT,
+    @UsuarioReceptorId    INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    -- Evita duplicar una solicitud si ya existe en cualquier dirección
+    IF EXISTS (
+        SELECT 1 FROM Amistades
+        WHERE (UsuarioSolicitanteId = @UsuarioSolicitanteId AND UsuarioReceptorId = @UsuarioReceptorId)
+           OR (UsuarioSolicitanteId = @UsuarioReceptorId AND UsuarioReceptorId = @UsuarioSolicitanteId)
+    )
+    BEGIN
+        SELECT -1 AS AmistadId; -- código especial: ya existe una relación entre estos usuarios
+        RETURN;
+    END
+
+    INSERT INTO Amistades (UsuarioSolicitanteId, UsuarioReceptorId, Estado)
+    VALUES (@UsuarioSolicitanteId, @UsuarioReceptorId, 'Pendiente');
+
+    SELECT SCOPE_IDENTITY() AS AmistadId;
+END
+GO
+
+
+
+--sp_Amistad_Responder
+USE EcoRetosDB;
+GO
+
+CREATE OR ALTER PROCEDURE sp_Amistad_Responder
+    @AmistadId        INT,
+    @UsuarioReceptorId INT,   -- para verificar que quien responde es el receptor real
+    @NuevoEstado      VARCHAR(20)  -- 'Aceptada' o 'Rechazada'
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    UPDATE Amistades
+    SET Estado = @NuevoEstado,
+        FechaRespuesta = SYSUTCDATETIME()
+    WHERE AmistadId = @AmistadId
+      AND UsuarioReceptorId = @UsuarioReceptorId
+      AND Estado = 'Pendiente';
+
+    SELECT @@ROWCOUNT AS FilasAfectadas;
+END
+GO
+
+
+
+--sp_Amistad_ListarAmigos
+USE EcoRetosDB;
+GO
+
+CREATE OR ALTER PROCEDURE sp_Amistad_ListarAmigos
+    @UsuarioId INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    SELECT
+        u.UsuarioId,
+        u.UID,
+        u.NombreUsuario,
+        a.FechaRespuesta AS FechaDesdeQueSonAmigos
+    FROM Amistades a
+    INNER JOIN Usuarios u
+        ON u.UsuarioId = CASE
+                            WHEN a.UsuarioSolicitanteId = @UsuarioId THEN a.UsuarioReceptorId
+                            ELSE a.UsuarioSolicitanteId
+                          END
+    WHERE (a.UsuarioSolicitanteId = @UsuarioId OR a.UsuarioReceptorId = @UsuarioId)
+      AND a.Estado = 'Aceptada';
+END
+GO
+
+
+--sp_Reto_ListarActivos
+USE EcoRetosDB;
+GO
+
+CREATE OR ALTER PROCEDURE sp_Reto_ListarActivos
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    SELECT RetoId, Titulo, Descripcion, PuntosRecompensa, Dificultad
+    FROM Retos
+    WHERE Activo = 1;
+END
+GO
+
+
+
+--Stored procedure para completar un reto (con validación + consumo de materiales
+USE EcoRetosDB;
+GO
+
+CREATE OR ALTER PROCEDURE sp_Reto_Completar
+    @UsuarioId INT,
+    @RetoId    INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SET XACT_ABORT ON; -- si algo falla, deshace toda la transacción automáticamente
+
+    -- Código de resultado: 1 = éxito, -1 = ya completado, -2 = materiales insuficientes, -3 = reto no existe/inactivo
+    DECLARE @Resultado INT = 1;
+
+    BEGIN TRANSACTION;
+
+    -- 1. Verificar que el reto existe y está activo
+    IF NOT EXISTS (SELECT 1 FROM Retos WHERE RetoId = @RetoId AND Activo = 1)
+    BEGIN
+        SET @Resultado = -3;
+        ROLLBACK TRANSACTION;
+        SELECT @Resultado AS Resultado;
+        RETURN;
+    END
+
+    -- 2. Verificar que no lo haya completado antes (no repetible)
+    IF EXISTS (SELECT 1 FROM UsuarioRetos WHERE UsuarioId = @UsuarioId AND RetoId = @RetoId)
+    BEGIN
+        SET @Resultado = -1;
+        ROLLBACK TRANSACTION;
+        SELECT @Resultado AS Resultado;
+        RETURN;
+    END
+
+    -- 3. Verificar que tenga TODOS los materiales requeridos en cantidad suficiente
+    IF EXISTS (
+        SELECT 1
+        FROM RetoMateriales rm
+        LEFT JOIN UsuarioMateriales um
+            ON um.MaterialId = rm.MaterialId AND um.UsuarioId = @UsuarioId
+        WHERE rm.RetoId = @RetoId
+          AND ISNULL(um.Cantidad, 0) < rm.CantidadRequerida
+    )
+    BEGIN
+        SET @Resultado = -2;
+        ROLLBACK TRANSACTION;
+        SELECT @Resultado AS Resultado;
+        RETURN;
+    END
+
+    -- 4. Descontar los materiales usados
+    UPDATE um
+    SET um.Cantidad = um.Cantidad - rm.CantidadRequerida
+    FROM UsuarioMateriales um
+    INNER JOIN RetoMateriales rm
+        ON rm.MaterialId = um.MaterialId
+    WHERE rm.RetoId = @RetoId
+      AND um.UsuarioId = @UsuarioId;
+
+    -- 5. Registrar el reto como completado
+    INSERT INTO UsuarioRetos (UsuarioId, RetoId)
+    VALUES (@UsuarioId, @RetoId);
+
+    -- 6. Otorgar los puntos de recompensa
+    UPDATE Usuarios
+    SET Puntos = Puntos + (SELECT PuntosRecompensa FROM Retos WHERE RetoId = @RetoId)
+    WHERE UsuarioId = @UsuarioId;
+
+    COMMIT TRANSACTION;
+
+    SELECT @Resultado AS Resultado;
+END
+GO
+
+
+
+
+
+USE EcoRetosDB;
+GO
+
+-- Materiales de ejemplo
+INSERT INTO Materiales (Nombre, Descripcion)
+VALUES
+    ('Botella de plástico', 'Botella PET reciclada'),
+    ('Cartón', 'Cartón limpio y seco');
+GO
+
+-- Reto de ejemplo
+INSERT INTO Retos (Titulo, Descripcion, PuntosRecompensa, Dificultad)
+VALUES ('Recicla 3 botellas', 'Junta y entrega 3 botellas de plástico para reciclar', 50, 'Facil');
+GO
+
+-- Receta: este reto requiere 3 botellas de plástico
+INSERT INTO RetoMateriales (RetoId, MaterialId, CantidadRequerida)
+SELECT
+    (SELECT RetoId FROM Retos WHERE Titulo = 'Recicla 3 botellas'),
+    (SELECT MaterialId FROM Materiales WHERE Nombre = 'Botella de plástico'),
+    3;
+GO
