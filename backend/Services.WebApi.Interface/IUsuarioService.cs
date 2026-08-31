@@ -6,4 +6,6 @@ public interface IUsuarioService
 {
     int Registrar(RegistroUsuarioDto dto);
     LoginResponseDto? Login(LoginDto dto);
+    LoginResponseDto? RenovarToken(string refreshTokenPlano);
+    void Logout(string refreshTokenPlano);
 }

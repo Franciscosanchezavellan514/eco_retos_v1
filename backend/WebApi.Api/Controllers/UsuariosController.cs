@@ -34,4 +34,24 @@ public class UsuariosController : ControllerBase
 
         return Ok(resultado);
     }
+
+    [HttpPost("refresh-token")]
+    public IActionResult RefreshToken([FromBody] RefreshTokenDto dto)
+    {
+        var resultado = _usuarioService.RenovarToken(dto.RefreshToken);
+
+        if (resultado == null)
+        {
+            return Unauthorized(new { mensaje = "Refresh token inválido o expirado." });
+        }
+
+        return Ok(resultado);
+    }
+
+    [HttpPost("logout")]
+    public IActionResult Logout([FromBody] RefreshTokenDto dto)
+    {
+        _usuarioService.Logout(dto.RefreshToken);
+        return Ok(new { mensaje = "Sesión cerrada correctamente." });
+    }
 }

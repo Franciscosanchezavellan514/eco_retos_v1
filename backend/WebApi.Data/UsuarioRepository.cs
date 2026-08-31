@@ -64,4 +64,37 @@ public class UsuarioRepository
             Activo = reader.GetBoolean(reader.GetOrdinal("Activo"))
         };
     }
+
+    public Usuario? ObtenerPorId(int usuarioId)
+    {
+        using var connection = new SqlConnection(_connectionString);
+        using var command = new SqlCommand("sp_Usuario_ObtenerPorId", connection);
+        command.CommandType = CommandType.StoredProcedure;
+        command.Parameters.AddWithValue("@UsuarioId", usuarioId);
+
+        connection.Open();
+        using var reader = command.ExecuteReader();
+
+        if (!reader.Read())
+        {
+            return null;
+        }
+
+        return new Usuario
+        {
+            UsuarioId = reader.GetInt32(reader.GetOrdinal("UsuarioId")),
+            UID = reader.GetString(reader.GetOrdinal("UID")),
+            NombreUsuario = reader.GetString(reader.GetOrdinal("NombreUsuario")),
+            Email = reader.GetString(reader.GetOrdinal("Email")),
+            PasswordHash = reader.GetString(reader.GetOrdinal("PasswordHash")),
+            FechaRegistro = reader.GetDateTime(reader.GetOrdinal("FechaRegistro")),
+            UltimaConexion = reader.IsDBNull(reader.GetOrdinal("UltimaConexion"))
+                ? null : reader.GetDateTime(reader.GetOrdinal("UltimaConexion")),
+            RachaActual = reader.GetInt32(reader.GetOrdinal("RachaActual")),
+            Puntos = reader.GetInt32(reader.GetOrdinal("Puntos")),
+            Monedas = reader.GetInt32(reader.GetOrdinal("Monedas")),
+            EsAdmin = reader.GetBoolean(reader.GetOrdinal("EsAdmin")),
+            Activo = reader.GetBoolean(reader.GetOrdinal("Activo"))
+        };
+    }
 }

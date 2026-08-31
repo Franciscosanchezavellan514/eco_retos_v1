@@ -11,6 +11,7 @@ builder.Services.AddSwaggerGen();
 builder.Services.AddScoped<UsuarioRepository>();
 builder.Services.AddScoped<IUsuarioService, UsuarioService>();
 builder.Services.AddScoped<JwtService>();
+builder.Services.AddScoped<RefreshTokenRepository>();
 
 var app = builder.Build();
 
