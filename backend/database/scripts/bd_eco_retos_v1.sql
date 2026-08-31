@@ -587,3 +587,152 @@ SELECT
     (SELECT MaterialId FROM Materiales WHERE Nombre = 'Botella de plástico'),
     3;
 GO
+
+
+
+INSERT INTO Plantas (Nombre, PrecioMonedas)
+VALUES
+    ('Girasol', 20),
+    ('Cactus', 35),
+    ('Lanzaguisantes Verde', 50);
+GO
+
+
+--Stored procedure para listar la tienda
+USE EcoRetosDB;
+GO
+
+CREATE OR ALTER PROCEDURE sp_Planta_ListarTienda
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    SELECT PlantaId, Nombre, PrecioMonedas, ImagenUrl
+    FROM Plantas;
+END
+GO
+
+
+--comprar una planta
+USE EcoRetosDB;
+GO
+
+CREATE OR ALTER PROCEDURE sp_Planta_Comprar
+    @UsuarioId INT,
+    @PlantaId  INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SET XACT_ABORT ON;
+
+    -- Resultado: 1 = éxito, -1 = ya la tiene, -2 = monedas insuficientes, -3 = planta no existe
+    DECLARE @Resultado INT = 1;
+    DECLARE @Precio INT;
+
+    BEGIN TRANSACTION;
+
+    SELECT @Precio = PrecioMonedas FROM Plantas WHERE PlantaId = @PlantaId;
+
+    IF @Precio IS NULL
+    BEGIN
+        SET @Resultado = -3;
+        ROLLBACK TRANSACTION;
+        SELECT @Resultado AS Resultado;
+        RETURN;
+    END
+
+    IF EXISTS (SELECT 1 FROM UsuarioPlantas WHERE UsuarioId = @UsuarioId AND PlantaId = @PlantaId)
+    BEGIN
+        SET @Resultado = -1;
+        ROLLBACK TRANSACTION;
+        SELECT @Resultado AS Resultado;
+        RETURN;
+    END
+
+    IF (SELECT Monedas FROM Usuarios WHERE UsuarioId = @UsuarioId) < @Precio
+    BEGIN
+        SET @Resultado = -2;
+        ROLLBACK TRANSACTION;
+        SELECT @Resultado AS Resultado;
+        RETURN;
+    END
+
+    UPDATE Usuarios SET Monedas = Monedas - @Precio WHERE UsuarioId = @UsuarioId;
+    INSERT INTO UsuarioPlantas (UsuarioId, PlantaId) VALUES (@UsuarioId, @PlantaId);
+
+    COMMIT TRANSACTION;
+
+    SELECT @Resultado AS Resultado;
+END
+GO
+
+
+--colocar una planta en un slot y ver el estado del jardín.
+USE EcoRetosDB;
+GO
+
+CREATE OR ALTER PROCEDURE sp_Jardin_ColocarPlanta
+    @UsuarioId  INT,
+    @NumeroSlot INT,
+    @PlantaId   INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    -- Resultado: 1 = éxito, -1 = no tienes esa planta desbloqueada, -2 = slot inválido
+    DECLARE @Resultado INT = 1;
+
+    -- Verificar que el usuario ya compró esa planta
+    IF NOT EXISTS (SELECT 1 FROM UsuarioPlantas WHERE UsuarioId = @UsuarioId AND PlantaId = @PlantaId)
+    BEGIN
+        SELECT -1 AS Resultado;
+        RETURN;
+    END
+
+    -- Verificar rango válido de slot (ejemplo: jardín de 12 slots, 1 al 12)
+    IF @NumeroSlot < 1 OR @NumeroSlot > 12
+    BEGIN
+        SELECT -2 AS Resultado;
+        RETURN;
+    END
+
+    -- Si ya existe una fila para ese slot, la actualiza (reemplaza la planta); si no, la crea
+    IF EXISTS (SELECT 1 FROM JardinSlots WHERE UsuarioId = @UsuarioId AND NumeroSlot = @NumeroSlot)
+    BEGIN
+        UPDATE JardinSlots
+        SET PlantaId = @PlantaId,
+            FechaColocacion = SYSUTCDATETIME()
+        WHERE UsuarioId = @UsuarioId AND NumeroSlot = @NumeroSlot;
+    END
+    ELSE
+    BEGIN
+        INSERT INTO JardinSlots (UsuarioId, NumeroSlot, PlantaId, FechaColocacion)
+        VALUES (@UsuarioId, @NumeroSlot, @PlantaId, SYSUTCDATETIME());
+    END
+
+    SELECT @Resultado AS Resultado;
+END
+GO
+
+
+
+--ver el estado completo del jardín de un usuario
+USE EcoRetosDB;
+GO
+
+CREATE OR ALTER PROCEDURE sp_Jardin_VerEstado
+    @UsuarioId INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    SELECT
+        js.NumeroSlot,
+        js.PlantaId,
+        p.Nombre AS NombrePlanta,
+        js.FechaColocacion
+    FROM JardinSlots js
+    INNER JOIN Plantas p ON p.PlantaId = js.PlantaId
+    WHERE js.UsuarioId = @UsuarioId;
+END
+GO

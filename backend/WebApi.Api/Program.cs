@@ -46,6 +46,10 @@ builder.Services.AddScoped<AmistadRepository>();
 builder.Services.AddScoped<IAmistadService, AmistadService>();
 builder.Services.AddScoped<RetoRepository>();
 builder.Services.AddScoped<IRetoService, RetoService>();
+builder.Services.AddScoped<PlantaRepository>();
+builder.Services.AddScoped<IPlantaService, PlantaService>();
+builder.Services.AddScoped<JardinRepository>();
+builder.Services.AddScoped<IJardinService, JardinService>();
 
 // Configuración de autenticación JWT
 var jwtKey = builder.Configuration["Jwt:Key"]!;
