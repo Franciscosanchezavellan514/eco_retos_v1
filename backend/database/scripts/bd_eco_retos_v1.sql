@@ -1086,3 +1086,67 @@ BEGIN
     END
 END
 GO
+
+
+
+--modulo de insignias
+USE EcoRetosDB;
+GO
+
+INSERT INTO Insignias (Nombre, Descripcion)
+VALUES
+    ('Primer Reto', 'Completaste tu primer reto ambiental'),
+    ('Reciclador Experto', 'Completaste 10 retos de reciclaje'),
+    ('Cerebrito Verde', 'Respondiste correctamente 5 preguntas de trivia');
+GO
+
+
+--Otorgar una insignia a un usuario
+USE EcoRetosDB;
+GO
+
+CREATE OR ALTER PROCEDURE sp_Insignia_Otorgar
+    @UsuarioId  INT,
+    @InsigniaId INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    -- Resultado: 1 = otorgada, -1 = ya la tenía
+    IF EXISTS (SELECT 1 FROM UsuarioInsignias WHERE UsuarioId = @UsuarioId AND InsigniaId = @InsigniaId)
+    BEGIN
+        SELECT -1 AS Resultado;
+        RETURN;
+    END
+
+    INSERT INTO UsuarioInsignias (UsuarioId, InsigniaId)
+    VALUES (@UsuarioId, @InsigniaId);
+
+    SELECT 1 AS Resultado;
+END
+GO
+
+
+--listar las insignias de un usuario.
+USE EcoRetosDB;
+GO
+
+CREATE OR ALTER PROCEDURE sp_Insignia_ListarPorUsuario
+    @UsuarioId INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    SELECT
+        i.InsigniaId,
+        i.Nombre,
+        i.Descripcion,
+        i.ImagenUrl,
+        ui.FechaObtenida
+    FROM UsuarioInsignias ui
+    INNER JOIN Insignias i ON i.InsigniaId = ui.InsigniaId
+    WHERE ui.UsuarioId = @UsuarioId
+    ORDER BY ui.FechaObtenida DESC;
+END
+GO
+
