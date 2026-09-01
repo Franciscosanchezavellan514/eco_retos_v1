@@ -951,4 +951,138 @@ GO
 
 EXEC sp_Trivia_ActualizarMejorPuntaje @UsuarioId = 4, @CategoriaId = 1;
 
-SELECT * FROM ResultadosTrivia WHERE UsuarioId = 4;
+
+
+
+--Muro Social: publicaciones, comentarios anidados, y reacciones (likes).
+USE EcoRetosDB;
+GO
+
+CREATE OR ALTER PROCEDURE sp_Publicacion_Crear
+    @UsuarioId INT,
+    @Contenido NVARCHAR(1000),
+    @ImagenUrl NVARCHAR(255) = NULL
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    INSERT INTO Publicaciones (UsuarioId, Contenido, ImagenUrl)
+    VALUES (@UsuarioId, @Contenido, @ImagenUrl);
+
+    SELECT SCOPE_IDENTITY() AS PublicacionId;
+END
+GO
+
+
+--Listar el muro (feed general, todas las publicaciones
+USE EcoRetosDB;
+GO
+
+CREATE OR ALTER PROCEDURE sp_Publicacion_ListarMuro
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    SELECT
+        p.PublicacionId,
+        p.UsuarioId,
+        u.NombreUsuario,
+        p.Contenido,
+        p.ImagenUrl,
+        p.FechaPublicacion,
+        (SELECT COUNT(*) FROM Reacciones r WHERE r.PublicacionId = p.PublicacionId) AS TotalReacciones,
+        (SELECT COUNT(*) FROM Comentarios c WHERE c.PublicacionId = p.PublicacionId) AS TotalComentarios
+    FROM Publicaciones p
+    INNER JOIN Usuarios u ON u.UsuarioId = p.UsuarioId
+    ORDER BY p.FechaPublicacion DESC;
+END
+GO
+
+
+USE EcoRetosDB;
+GO
+
+CREATE OR ALTER PROCEDURE sp_Comentario_Crear
+    @PublicacionId     INT,
+    @UsuarioId         INT,
+    @Contenido         NVARCHAR(500),
+    @ComentarioPadreId INT = NULL
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    -- Verifica que la publicación exista
+    IF NOT EXISTS (SELECT 1 FROM Publicaciones WHERE PublicacionId = @PublicacionId)
+    BEGIN
+        SELECT -1 AS ComentarioId;
+        RETURN;
+    END
+
+    -- Si es respuesta a otro comentario, verifica que ese comentario padre pertenezca a la misma publicación
+    IF @ComentarioPadreId IS NOT NULL AND NOT EXISTS (
+        SELECT 1 FROM Comentarios WHERE ComentarioId = @ComentarioPadreId AND PublicacionId = @PublicacionId
+    )
+    BEGIN
+        SELECT -2 AS ComentarioId;
+        RETURN;
+    END
+
+    INSERT INTO Comentarios (PublicacionId, UsuarioId, ComentarioPadreId, Contenido)
+    VALUES (@PublicacionId, @UsuarioId, @ComentarioPadreId, @Contenido);
+
+    SELECT SCOPE_IDENTITY() AS ComentarioId;
+END
+GO
+
+
+--listar comentarios de una publicación
+USE EcoRetosDB;
+GO
+
+CREATE OR ALTER PROCEDURE sp_Comentario_ListarPorPublicacion
+    @PublicacionId INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    SELECT
+        c.ComentarioId,
+        c.UsuarioId,
+        u.NombreUsuario,
+        c.ComentarioPadreId,
+        c.Contenido,
+        c.FechaComentario
+    FROM Comentarios c
+    INNER JOIN Usuarios u ON u.UsuarioId = c.UsuarioId
+    WHERE c.PublicacionId = @PublicacionId
+    ORDER BY c.FechaComentario ASC;
+END
+GO
+
+
+
+--reacciones (like/unlike, con el UNIQUE)
+USE EcoRetosDB;
+GO
+
+CREATE OR ALTER PROCEDURE sp_Reaccion_Toggle
+    @PublicacionId INT,
+    @UsuarioId     INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    -- Si ya existe la reacción, la quita (unlike). Si no existe, la agrega (like).
+    IF EXISTS (SELECT 1 FROM Reacciones WHERE PublicacionId = @PublicacionId AND UsuarioId = @UsuarioId)
+    BEGIN
+        DELETE FROM Reacciones WHERE PublicacionId = @PublicacionId AND UsuarioId = @UsuarioId;
+        SELECT 'Quitado' AS Accion;
+    END
+    ELSE
+    BEGIN
+        INSERT INTO Reacciones (PublicacionId, UsuarioId, Tipo)
+        VALUES (@PublicacionId, @UsuarioId, 'Like');
+        SELECT 'Agregado' AS Accion;
+    END
+END
+GO
