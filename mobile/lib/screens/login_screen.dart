@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import '../services/auth_service.dart';
+import '../services/session_service.dart';
 import '../theme/app_theme.dart';
 import 'register_screen.dart';
+import 'home_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -14,6 +16,7 @@ class _LoginScreenState extends State<LoginScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _authService = AuthService();
+  final _sessionService = SessionService();
 
   bool _cargando = false;
   bool _passwordVisible = false;
@@ -30,15 +33,30 @@ class _LoginScreenState extends State<LoginScreen> {
       _passwordController.text,
     );
 
+    if (resultado == null) {
+      setState(() {
+        _cargando = false;
+        _mensajeError = 'Email o contraseña incorrectos.';
+      });
+      return;
+    }
+
+    await _sessionService.guardarSesion(
+      token: resultado.token,
+      refreshToken: resultado.refreshToken,
+      usuarioId: resultado.usuarioId,
+      uid: resultado.uid,
+      nombreUsuario: resultado.nombreUsuario,
+    );
+
     setState(() => _cargando = false);
 
-    if (resultado == null) {
-      setState(() => _mensajeError = 'Email o contraseña incorrectos.');
-    } else if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('¡Bienvenido, ${resultado.nombreUsuario}!')),
+    if (mounted) {
+      Navigator.pushAndRemoveUntil(
+        context,
+        MaterialPageRoute(builder: (context) => const HomeScreen()),
+        (route) => false,
       );
-      // La navegación a la pantalla principal se conecta en el siguiente paso
     }
   }
 
