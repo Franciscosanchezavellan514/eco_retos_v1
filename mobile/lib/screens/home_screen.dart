@@ -4,6 +4,7 @@ import '../services/session_service.dart';
 import '../services/usuario_service.dart';
 import '../theme/app_theme.dart';
 import 'login_screen.dart';
+import 'retos_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -50,6 +51,13 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
+  void _irARetos() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const RetosScreen()),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -66,35 +74,86 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ],
       ),
-      body: Center(
-        child: _cargando
-            ? const CircularProgressIndicator()
-            : _error != null
-                ? Text(_error!, style: const TextStyle(color: AppColors.danger))
-                : Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
+      body: _cargando
+          ? const Center(child: CircularProgressIndicator())
+          : _error != null
+              ? Center(
+                  child: Text(_error!, style: const TextStyle(color: AppColors.danger)),
+                )
+              : Padding(
+                  padding: const EdgeInsets.all(20),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      const Icon(Icons.eco, color: AppColors.primary, size: 64),
-                      const SizedBox(height: 16),
+                      Row(
+                        children: [
+                          Container(
+                            width: 52,
+                            height: 52,
+                            decoration: const BoxDecoration(
+                              color: AppColors.surfaceSoft,
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(Icons.eco, color: AppColors.primary, size: 26),
+                          ),
+                          const SizedBox(width: 14),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  '¡Bienvenido, ${_perfil!.nombreUsuario}!',
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 16,
+                                    color: AppColors.textPrimary,
+                                  ),
+                                ),
+                                Text(
+                                  'UID: ${_perfil!.uid}',
+                                  style: TextStyle(color: AppColors.textMuted, fontSize: 12),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 28),
                       Text(
-                        '¡Bienvenido, ${_perfil!.nombreUsuario}!',
-                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                        'Explora',
+                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
                               color: AppColors.primaryDark,
                               fontWeight: FontWeight.w600,
                             ),
                       ),
-                      const SizedBox(height: 8),
-                      Text(
-                        'UID: ${_perfil!.uid}',
-                        style: TextStyle(color: AppColors.textMuted),
-                      ),
-                      Text(
-                        _perfil!.email,
-                        style: TextStyle(color: AppColors.textMuted),
+                      const SizedBox(height: 12),
+                      GestureDetector(
+                        onTap: _irARetos,
+                        child: Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(color: AppColors.surfaceSoft, width: 1.5),
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(Icons.recycling, color: AppColors.primary, size: 28),
+                              const SizedBox(width: 14),
+                              const Expanded(
+                                child: Text(
+                                  'Retos Ambientales',
+                                  style: TextStyle(fontWeight: FontWeight.w600),
+                                ),
+                              ),
+                              const Icon(Icons.chevron_right, color: AppColors.textMuted),
+                            ],
+                          ),
+                        ),
                       ),
                     ],
                   ),
-      ),
+                ),
     );
   }
 }
