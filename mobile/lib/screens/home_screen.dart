@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import '../models/usuario_perfil.dart';
 import '../services/session_service.dart';
+import '../services/usuario_service.dart';
 import '../theme/app_theme.dart';
 import 'login_screen.dart';
 
@@ -12,18 +14,28 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   final _sessionService = SessionService();
-  String _nombreUsuario = '';
+  final _usuarioService = UsuarioService();
+
+  UsuarioPerfil? _perfil;
+  bool _cargando = true;
+  String? _error;
 
   @override
   void initState() {
     super.initState();
-    _cargarUsuario();
+    _cargarPerfil();
   }
 
-  Future<void> _cargarUsuario() async {
-    final nombre = await _sessionService.obtenerNombreUsuario();
+  Future<void> _cargarPerfil() async {
+    final perfil = await _usuarioService.obtenerMiPerfil();
+
     setState(() {
-      _nombreUsuario = nombre ?? '';
+      _cargando = false;
+      if (perfil == null) {
+        _error = 'No se pudo cargar tu perfil.';
+      } else {
+        _perfil = perfil;
+      }
     });
   }
 
@@ -33,7 +45,7 @@ class _HomeScreenState extends State<HomeScreen> {
       Navigator.pushAndRemoveUntil(
         context,
         MaterialPageRoute(builder: (context) => const LoginScreen()),
-        (route) => false, // borra todo el historial de navegación anterior
+        (route) => false,
       );
     }
   }
@@ -55,25 +67,33 @@ class _HomeScreenState extends State<HomeScreen> {
         ],
       ),
       body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(Icons.eco, color: AppColors.primary, size: 64),
-            const SizedBox(height: 16),
-            Text(
-              '¡Bienvenido, $_nombreUsuario!',
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    color: AppColors.primaryDark,
-                    fontWeight: FontWeight.w600,
+        child: _cargando
+            ? const CircularProgressIndicator()
+            : _error != null
+                ? Text(_error!, style: const TextStyle(color: AppColors.danger))
+                : Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(Icons.eco, color: AppColors.primary, size: 64),
+                      const SizedBox(height: 16),
+                      Text(
+                        '¡Bienvenido, ${_perfil!.nombreUsuario}!',
+                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                              color: AppColors.primaryDark,
+                              fontWeight: FontWeight.w600,
+                            ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'UID: ${_perfil!.uid}',
+                        style: TextStyle(color: AppColors.textMuted),
+                      ),
+                      Text(
+                        _perfil!.email,
+                        style: TextStyle(color: AppColors.textMuted),
+                      ),
+                    ],
                   ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Aquí irá el resto de la app',
-              style: TextStyle(color: AppColors.textMuted),
-            ),
-          ],
-        ),
       ),
     );
   }
