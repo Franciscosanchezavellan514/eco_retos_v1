@@ -50,12 +50,23 @@ builder.Services.AddScoped<PlantaRepository>();
 builder.Services.AddScoped<IPlantaService, PlantaService>();
 builder.Services.AddScoped<JardinRepository>();
 builder.Services.AddScoped<IJardinService, JardinService>();
-builder.Services.AddScoped<TriviaRepository>();
 builder.Services.AddScoped<ITriviaService, TriviaService>();
+builder.Services.AddScoped<TriviaRepository>();
 builder.Services.AddScoped<MuroRepository>();
 builder.Services.AddScoped<IMuroService, MuroService>();
 builder.Services.AddScoped<InsigniaRepository>();
 builder.Services.AddScoped<IInsigniaService, InsigniaService>();
+
+// Configuración de CORS para Flutter Web
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("PermitirFlutterDev", policy =>
+    {
+        policy.AllowAnyOrigin()
+              .AllowAnyMethod()
+              .AllowAnyHeader();
+    });
+});
 
 // Configuración de autenticación JWT
 var jwtKey = builder.Configuration["Jwt:Key"]!;
@@ -73,7 +84,9 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             ValidateIssuerSigningKey = true,
             ValidIssuer = jwtIssuer,
             ValidAudience = jwtAudience,
-            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey))
+            IssuerSigningKey = new SymmetricSecurityKey(
+                Encoding.UTF8.GetBytes(jwtKey)
+            )
         };
     });
 
@@ -89,8 +102,11 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
-app.UseAuthentication();  // IMPORTANTE: va ANTES de UseAuthorization
+app.UseCors("PermitirFlutterDev");
+
+app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
+
 app.Run();
