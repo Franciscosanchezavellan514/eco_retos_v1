@@ -5,6 +5,7 @@ import '../services/usuario_service.dart';
 import '../theme/app_theme.dart';
 import 'login_screen.dart';
 import 'retos_screen.dart';
+import 'amigos_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -55,6 +56,44 @@ class _HomeScreenState extends State<HomeScreen> {
     Navigator.push(
       context,
       MaterialPageRoute(builder: (context) => const RetosScreen()),
+    );
+  }
+
+  void _irAAmigos() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const AmigosScreen()),
+    );
+  }
+
+  Widget _tarjetaMenu({
+    required IconData icono,
+    required String titulo,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: AppColors.surfaceSoft, width: 1.5),
+        ),
+        child: Row(
+          children: [
+            Icon(icono, color: AppColors.primary, size: 28),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Text(
+                titulo,
+                style: const TextStyle(fontWeight: FontWeight.w600),
+              ),
+            ),
+            const Icon(Icons.chevron_right, color: AppColors.textMuted),
+          ],
+        ),
+      ),
     );
   }
 
@@ -127,29 +166,16 @@ class _HomeScreenState extends State<HomeScreen> {
                             ),
                       ),
                       const SizedBox(height: 12),
-                      GestureDetector(
+                      _tarjetaMenu(
+                        icono: Icons.recycling,
+                        titulo: 'Retos Ambientales',
                         onTap: _irARetos,
-                        child: Container(
-                          padding: const EdgeInsets.all(16),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(16),
-                            border: Border.all(color: AppColors.surfaceSoft, width: 1.5),
-                          ),
-                          child: Row(
-                            children: [
-                              const Icon(Icons.recycling, color: AppColors.primary, size: 28),
-                              const SizedBox(width: 14),
-                              const Expanded(
-                                child: Text(
-                                  'Retos Ambientales',
-                                  style: TextStyle(fontWeight: FontWeight.w600),
-                                ),
-                              ),
-                              const Icon(Icons.chevron_right, color: AppColors.textMuted),
-                            ],
-                          ),
-                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      _tarjetaMenu(
+                        icono: Icons.group,
+                        titulo: 'Amigos',
+                        onTap: _irAAmigos,
                       ),
                     ],
                   ),
