@@ -18,7 +18,7 @@ public class RetoService : IRetoService
         return _retoRepository.ListarActivos();
     }
 
-    public int Completar(int usuarioId, int retoId)
+    public ResultadoCompletarReto Completar(int usuarioId, int retoId)
     {
         return _retoRepository.Completar(usuarioId, retoId);
     }

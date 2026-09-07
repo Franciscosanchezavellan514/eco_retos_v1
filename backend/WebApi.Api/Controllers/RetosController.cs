@@ -34,9 +34,14 @@ public class RetosController : ControllerBase
         var usuarioId = ObtenerUsuarioIdDelToken();
         var resultado = _retoService.Completar(usuarioId, retoId);
 
-        return resultado switch
+        return resultado.Resultado switch
         {
-            1 => Ok(new { mensaje = "¡Reto completado! Puntos otorgados." }),
+            1 => Ok(new
+            {
+                mensaje = $"¡Reto completado! Ganaste {resultado.PuntosOtorgados} puntos y {resultado.MonedasOtorgadas} moneda(s).",
+                puntosOtorgados = resultado.PuntosOtorgados,
+                monedasOtorgadas = resultado.MonedasOtorgadas
+            }),
             -1 => Conflict(new { mensaje = "Ya completaste este reto anteriormente." }),
             -2 => BadRequest(new { mensaje = "No tienes suficientes materiales para completar este reto." }),
             -3 => NotFound(new { mensaje = "Este reto no existe o ya no está activo." }),

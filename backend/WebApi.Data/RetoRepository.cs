@@ -5,7 +5,6 @@ using WebApi.Model;
 
 namespace WebApi.Data;
 
-
 public class RetoRepository
 {
     private readonly string _connectionString;
@@ -42,7 +41,7 @@ public class RetoRepository
         return retos;
     }
 
-    public int Completar(int usuarioId, int retoId)
+    public ResultadoCompletarReto Completar(int usuarioId, int retoId)
     {
         using var connection = new SqlConnection(_connectionString);
         using var command = new SqlCommand("sp_Reto_Completar", connection);
@@ -51,9 +50,16 @@ public class RetoRepository
         command.Parameters.AddWithValue("@RetoId", retoId);
 
         connection.Open();
-        var resultado = command.ExecuteScalar();
+        using var reader = command.ExecuteReader();
+        reader.Read();
 
-        return Convert.ToInt32(resultado);
-        // 1 = éxito, -1 = ya completado, -2 = materiales insuficientes, -3 = reto no existe
+        var resultado = reader.GetInt32(reader.GetOrdinal("Resultado"));
+
+        return new ResultadoCompletarReto
+        {
+            Resultado = resultado,
+            PuntosOtorgados = resultado == 1 ? reader.GetInt32(reader.GetOrdinal("PuntosOtorgados")) : 0,
+            MonedasOtorgadas = resultado == 1 ? reader.GetInt32(reader.GetOrdinal("MonedasOtorgadas")) : 0
+        };
     }
 }
