@@ -1266,3 +1266,213 @@ BEGIN
     WHERE Email = @Email;
 END
 GO
+
+USE EcoRetosDB;
+GO
+
+-- Actualiza el material que ya existía con su precio real
+UPDATE Materiales SET Descripcion = 'Base para construir macetas, carritos y comederos.'
+WHERE Nombre = 'Botella de plástico';
+
+-- Materiales nuevos del prototipo (se agrega precio en una columna nueva)
+
+USE EcoRetosDB;
+GO
+
+ALTER TABLE Materiales
+ADD PrecioPuntos INT NOT NULL DEFAULT 0;
+GO
+
+
+
+USE EcoRetosDB;
+GO
+
+-- Actualiza el material existente con su precio real
+UPDATE Materiales SET PrecioPuntos = 40 WHERE Nombre = 'Botella de plástico';
+
+-- Actualiza el segundo material existente (era de una prueba anterior, ajustamos su nombre y precio)
+UPDATE Materiales SET Nombre = 'Cartón reciclado', Descripcion = 'Material útil para organizadores y estructuras.', PrecioPuntos = 25
+WHERE Nombre = 'Cartón';
+
+-- Inserta los materiales nuevos que faltan
+INSERT INTO Materiales (Nombre, Descripcion, PrecioPuntos)
+VALUES
+    ('Tapa plástica', 'Sirve como rueda o pieza decorativa.', 10),
+    ('Papel periódico', 'Sirve para decorar, reforzar o cubrir superficies.', 15),
+    ('Palito de madera', 'Funciona como eje, soporte o estructura.', 20),
+    ('Caja Tetra Pak', 'Ideal para crear casas, macetas y contenedores.', 35),
+    ('Cuerda o hilo', 'Sirve para colgar, sujetar y amarrar piezas.', 15),
+    ('Cinta adhesiva', 'Permite unir materiales durante la construcción.', 20),
+    ('Pintura ecológica', 'Sirve para decorar los proyectos ecológicos.', 30),
+    ('CD/DVD viejo', 'Material decorativo para proyectos creativos.', 30),
+    ('Semillas', 'Necesarias para retos de cultivo y plantas.', 25),
+    ('Tierra abonada', 'Base para macetas y proyectos de siembra.', 35);
+GO
+
+
+USE EcoRetosDB;
+GO
+
+CREATE OR ALTER PROCEDURE sp_Material_ListarTienda
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    SELECT MaterialId, Nombre, Descripcion, PrecioPuntos, ImagenUrl
+    FROM Materiales;
+END
+GO
+
+USE EcoRetosDB;
+GO
+
+CREATE OR ALTER PROCEDURE sp_Material_Comprar
+    @UsuarioId  INT,
+    @MaterialId INT,
+    @Cantidad   INT = 1
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SET XACT_ABORT ON;
+
+    -- Resultado: 1 = éxito, -1 = material no existe, -2 = puntos insuficientes
+    DECLARE @Resultado INT = 1;
+    DECLARE @Precio INT;
+    DECLARE @CostoTotal INT;
+
+    BEGIN TRANSACTION;
+
+    SELECT @Precio = PrecioPuntos FROM Materiales WHERE MaterialId = @MaterialId;
+
+    IF @Precio IS NULL
+    BEGIN
+        SET @Resultado = -1;
+        ROLLBACK TRANSACTION;
+        SELECT @Resultado AS Resultado;
+        RETURN;
+    END
+
+    SET @CostoTotal = @Precio * @Cantidad;
+
+    IF (SELECT Puntos FROM Usuarios WHERE UsuarioId = @UsuarioId) < @CostoTotal
+    BEGIN
+        SET @Resultado = -2;
+        ROLLBACK TRANSACTION;
+        SELECT @Resultado AS Resultado;
+        RETURN;
+    END
+
+    UPDATE Usuarios SET Puntos = Puntos - @CostoTotal WHERE UsuarioId = @UsuarioId;
+
+    IF EXISTS (SELECT 1 FROM UsuarioMateriales WHERE UsuarioId = @UsuarioId AND MaterialId = @MaterialId)
+    BEGIN
+        UPDATE UsuarioMateriales
+        SET Cantidad = Cantidad + @Cantidad
+        WHERE UsuarioId = @UsuarioId AND MaterialId = @MaterialId;
+    END
+    ELSE
+    BEGIN
+        INSERT INTO UsuarioMateriales (UsuarioId, MaterialId, Cantidad)
+        VALUES (@UsuarioId, @MaterialId, @Cantidad);
+    END
+
+    COMMIT TRANSACTION;
+
+    SELECT @Resultado AS Resultado;
+END
+GO
+
+
+
+
+USE EcoRetosDB;
+GO
+
+CREATE OR ALTER PROCEDURE sp_Material_ListarInventario
+    @UsuarioId INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    SELECT
+        m.MaterialId,
+        m.Nombre,
+        m.Descripcion,
+        m.ImagenUrl,
+        um.Cantidad
+    FROM UsuarioMateriales um
+    INNER JOIN Materiales m ON m.MaterialId = um.MaterialId
+    WHERE um.UsuarioId = @UsuarioId
+      AND um.Cantidad > 0;
+END
+GO
+
+
+
+
+
+USE EcoRetosDB;
+GO
+
+CREATE OR ALTER PROCEDURE sp_Material_Comprar
+    @UsuarioId  INT,
+    @MaterialId INT,
+    @Cantidad   INT = 1
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SET XACT_ABORT ON;
+
+    -- Resultado: 1 = éxito, -1 = material no existe, -2 = puntos insuficientes, -3 = cantidad inválida
+    DECLARE @Resultado INT = 1;
+    DECLARE @Precio INT;
+    DECLARE @CostoTotal INT;
+
+    IF @Cantidad < 1
+    BEGIN
+        SELECT -3 AS Resultado;
+        RETURN;
+    END
+
+    BEGIN TRANSACTION;
+
+    SELECT @Precio = PrecioPuntos FROM Materiales WHERE MaterialId = @MaterialId;
+
+    IF @Precio IS NULL
+    BEGIN
+        SET @Resultado = -1;
+        ROLLBACK TRANSACTION;
+        SELECT @Resultado AS Resultado;
+        RETURN;
+    END
+
+    SET @CostoTotal = @Precio * @Cantidad;
+
+    IF (SELECT Puntos FROM Usuarios WHERE UsuarioId = @UsuarioId) < @CostoTotal
+    BEGIN
+        SET @Resultado = -2;
+        ROLLBACK TRANSACTION;
+        SELECT @Resultado AS Resultado;
+        RETURN;
+    END
+
+    UPDATE Usuarios SET Puntos = Puntos - @CostoTotal WHERE UsuarioId = @UsuarioId;
+
+    IF EXISTS (SELECT 1 FROM UsuarioMateriales WHERE UsuarioId = @UsuarioId AND MaterialId = @MaterialId)
+    BEGIN
+        UPDATE UsuarioMateriales
+        SET Cantidad = Cantidad + @Cantidad
+        WHERE UsuarioId = @UsuarioId AND MaterialId = @MaterialId;
+    END
+    ELSE
+    BEGIN
+        INSERT INTO UsuarioMateriales (UsuarioId, MaterialId, Cantidad)
+        VALUES (@UsuarioId, @MaterialId, @Cantidad);
+    END
+
+    COMMIT TRANSACTION;
+
+    SELECT @Resultado AS Resultado;
+END
+GO

@@ -6,6 +6,8 @@ import '../theme/app_theme.dart';
 import 'login_screen.dart';
 import 'retos_screen.dart';
 import 'amigos_screen.dart';
+import 'tienda_screen.dart';
+import 'jardin_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -52,18 +54,8 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  void _irARetos() {
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (context) => const RetosScreen()),
-    );
-  }
-
-  void _irAAmigos() {
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (context) => const AmigosScreen()),
-    );
+  void _navegarA(Widget pantalla) {
+    Navigator.push(context, MaterialPageRoute(builder: (context) => pantalla));
   }
 
   Widget _tarjetaMenu({
@@ -119,7 +111,7 @@ class _HomeScreenState extends State<HomeScreen> {
               ? Center(
                   child: Text(_error!, style: const TextStyle(color: AppColors.danger)),
                 )
-              : Padding(
+              : SingleChildScrollView(
                   padding: const EdgeInsets.all(20),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -169,13 +161,25 @@ class _HomeScreenState extends State<HomeScreen> {
                       _tarjetaMenu(
                         icono: Icons.recycling,
                         titulo: 'Retos Ambientales',
-                        onTap: _irARetos,
+                        onTap: () => _navegarA(const RetosScreen()),
                       ),
                       const SizedBox(height: 10),
                       _tarjetaMenu(
                         icono: Icons.group,
                         titulo: 'Amigos',
-                        onTap: _irAAmigos,
+                        onTap: () => _navegarA(const AmigosScreen()),
+                      ),
+                      const SizedBox(height: 10),
+                      _tarjetaMenu(
+                        icono: Icons.storefront,
+                        titulo: 'Tienda de Plantas',
+                        onTap: () => _navegarA(const TiendaScreen()),
+                      ),
+                      const SizedBox(height: 10),
+                      _tarjetaMenu(
+                        icono: Icons.grass,
+                        titulo: 'Mi Jardín',
+                        onTap: () => _navegarA(const JardinScreen()),
                       ),
                     ],
                   ),

@@ -56,6 +56,8 @@ builder.Services.AddScoped<MuroRepository>();
 builder.Services.AddScoped<IMuroService, MuroService>();
 builder.Services.AddScoped<InsigniaRepository>();
 builder.Services.AddScoped<IInsigniaService, InsigniaService>();
+builder.Services.AddScoped<MaterialRepository>();
+builder.Services.AddScoped<IMaterialService, MaterialService>();
 
 // Configuración de CORS para Flutter Web
 builder.Services.AddCors(options =>
