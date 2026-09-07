@@ -61,7 +61,8 @@ public class UsuarioRepository
             Puntos = reader.GetInt32(reader.GetOrdinal("Puntos")),
             Monedas = reader.GetInt32(reader.GetOrdinal("Monedas")),
             EsAdmin = reader.GetBoolean(reader.GetOrdinal("EsAdmin")),
-            Activo = reader.GetBoolean(reader.GetOrdinal("Activo"))
+            Activo = reader.GetBoolean(reader.GetOrdinal("Activo")),
+            Nivel = reader.GetInt32(reader.GetOrdinal("Nivel"))
         };
     }
 
@@ -94,7 +95,8 @@ public class UsuarioRepository
             Puntos = reader.GetInt32(reader.GetOrdinal("Puntos")),
             Monedas = reader.GetInt32(reader.GetOrdinal("Monedas")),
             EsAdmin = reader.GetBoolean(reader.GetOrdinal("EsAdmin")),
-            Activo = reader.GetBoolean(reader.GetOrdinal("Activo"))
+            Activo = reader.GetBoolean(reader.GetOrdinal("Activo")),
+            Nivel = reader.GetInt32(reader.GetOrdinal("Nivel"))
         };
     }
 }

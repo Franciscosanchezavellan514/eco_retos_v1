@@ -1150,3 +1150,119 @@ BEGIN
 END
 GO
 
+
+--fixs de la idea main
+CREATE OR ALTER FUNCTION fn_CalcularNivel (@Puntos INT)
+RETURNS INT
+AS
+BEGIN
+    DECLARE @Nivel INT;
+
+    SET @Nivel = CASE
+        WHEN @Puntos >= 800 THEN 5
+        WHEN @Puntos >= 500 THEN 4
+        WHEN @Puntos >= 250 THEN 3
+        WHEN @Puntos >= 100 THEN 2
+        ELSE 1
+    END;
+
+    RETURN @Nivel;
+END
+GO
+
+
+USE EcoRetosDB;
+GO
+
+CREATE OR ALTER PROCEDURE sp_Jardin_ColocarPlanta
+    @UsuarioId  INT,
+    @NumeroSlot INT,
+    @PlantaId   INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    -- Resultado: 1 = éxito, -1 = no tienes esa planta desbloqueada,
+    -- -2 = slot fuera de rango absoluto, -3 = slot bloqueado por nivel insuficiente
+    DECLARE @Resultado INT = 1;
+    DECLARE @Puntos INT;
+    DECLARE @Nivel INT;
+    DECLARE @SlotsDisponibles INT;
+
+    SELECT @Puntos = Puntos FROM Usuarios WHERE UsuarioId = @UsuarioId;
+    SET @Nivel = dbo.fn_CalcularNivel(@Puntos);
+    SET @SlotsDisponibles = @Nivel * 3;
+
+    IF NOT EXISTS (SELECT 1 FROM UsuarioPlantas WHERE UsuarioId = @UsuarioId AND PlantaId = @PlantaId)
+    BEGIN
+        SELECT -1 AS Resultado;
+        RETURN;
+    END
+
+    IF @NumeroSlot < 1 OR @NumeroSlot > 15  -- 15 = máximo absoluto (nivel 5)
+    BEGIN
+        SELECT -2 AS Resultado;
+        RETURN;
+    END
+
+    IF @NumeroSlot > @SlotsDisponibles
+    BEGIN
+        SELECT -3 AS Resultado;
+        RETURN;
+    END
+
+    IF EXISTS (SELECT 1 FROM JardinSlots WHERE UsuarioId = @UsuarioId AND NumeroSlot = @NumeroSlot)
+    BEGIN
+        UPDATE JardinSlots
+        SET PlantaId = @PlantaId,
+            FechaColocacion = SYSUTCDATETIME()
+        WHERE UsuarioId = @UsuarioId AND NumeroSlot = @NumeroSlot;
+    END
+    ELSE
+    BEGIN
+        INSERT INTO JardinSlots (UsuarioId, NumeroSlot, PlantaId, FechaColocacion)
+        VALUES (@UsuarioId, @NumeroSlot, @PlantaId, SYSUTCDATETIME());
+    END
+
+    SELECT @Resultado AS Resultado;
+END
+GO
+
+
+USE EcoRetosDB;
+GO
+
+CREATE OR ALTER PROCEDURE sp_Usuario_ObtenerPorId
+    @UsuarioId INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    SELECT UsuarioId, UID, NombreUsuario, Email, PasswordHash,
+           FechaRegistro, UltimaConexion, RachaActual, Puntos, Monedas,
+           EsAdmin, Activo,
+           dbo.fn_CalcularNivel(Puntos) AS Nivel
+    FROM Usuarios
+    WHERE UsuarioId = @UsuarioId;
+END
+GO
+
+
+
+USE EcoRetosDB;
+GO
+
+CREATE OR ALTER PROCEDURE sp_Usuario_ObtenerPorEmail
+    @Email NVARCHAR(150)
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    SELECT UsuarioId, UID, NombreUsuario, Email, PasswordHash,
+           FechaRegistro, UltimaConexion, RachaActual, Puntos, Monedas,
+           EsAdmin, Activo,
+           dbo.fn_CalcularNivel(Puntos) AS Nivel
+    FROM Usuarios
+    WHERE Email = @Email;
+END
+GO

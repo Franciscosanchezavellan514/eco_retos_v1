@@ -14,4 +14,5 @@ public class Usuario
     public int Monedas { get; set; }
     public bool EsAdmin { get; set; }
     public bool Activo { get; set; }
+    public int Nivel { get; set; }
 }
