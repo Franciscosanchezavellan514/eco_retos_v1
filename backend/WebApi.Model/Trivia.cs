@@ -25,4 +25,5 @@ public class ResultadoRespuestaInfo
 {
     public bool EsCorrecta { get; set; }
     public int PuntosOtorgados { get; set; }
+    public int MonedasOtorgadas { get; set; }
 }

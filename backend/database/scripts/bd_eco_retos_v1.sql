@@ -1476,3 +1476,156 @@ BEGIN
     SELECT @Resultado AS Resultado;
 END
 GO
+
+
+
+USE EcoRetosDB;
+GO
+
+CREATE OR ALTER PROCEDURE sp_Reto_Completar
+    @UsuarioId INT,
+    @RetoId    INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SET XACT_ABORT ON;
+
+    -- Resultado: 1 = éxito, -1 = ya completado, -2 = materiales insuficientes, -3 = reto no existe
+    DECLARE @Resultado INT = 1;
+    DECLARE @PuntosRecompensa INT;
+    DECLARE @MonedasRecompensa INT;
+    DECLARE @Dificultad VARCHAR(20);
+
+    BEGIN TRANSACTION;
+
+    SELECT @PuntosRecompensa = PuntosRecompensa, @Dificultad = Dificultad
+    FROM Retos WHERE RetoId = @RetoId AND Activo = 1;
+
+    IF @PuntosRecompensa IS NULL
+    BEGIN
+        SET @Resultado = -3;
+        ROLLBACK TRANSACTION;
+        SELECT @Resultado AS Resultado;
+        RETURN;
+    END
+
+    IF EXISTS (SELECT 1 FROM UsuarioRetos WHERE UsuarioId = @UsuarioId AND RetoId = @RetoId)
+    BEGIN
+        SET @Resultado = -1;
+        ROLLBACK TRANSACTION;
+        SELECT @Resultado AS Resultado;
+        RETURN;
+    END
+
+    IF EXISTS (
+        SELECT 1
+        FROM RetoMateriales rm
+        LEFT JOIN UsuarioMateriales um
+            ON um.MaterialId = rm.MaterialId AND um.UsuarioId = @UsuarioId
+        WHERE rm.RetoId = @RetoId
+          AND ISNULL(um.Cantidad, 0) < rm.CantidadRequerida
+    )
+    BEGIN
+        SET @Resultado = -2;
+        ROLLBACK TRANSACTION;
+        SELECT @Resultado AS Resultado;
+        RETURN;
+    END
+
+    -- Monedas según dificultad, igual que el prototipo
+    SET @MonedasRecompensa = CASE @Dificultad
+        WHEN 'Facil' THEN 1
+        WHEN 'Medio' THEN 2
+        WHEN 'Dificil' THEN 3
+        ELSE 1
+    END;
+
+    UPDATE um
+    SET um.Cantidad = um.Cantidad - rm.CantidadRequerida
+    FROM UsuarioMateriales um
+    INNER JOIN RetoMateriales rm ON rm.MaterialId = um.MaterialId
+    WHERE rm.RetoId = @RetoId AND um.UsuarioId = @UsuarioId;
+
+    INSERT INTO UsuarioRetos (UsuarioId, RetoId)
+    VALUES (@UsuarioId, @RetoId);
+
+    UPDATE Usuarios
+    SET Puntos = Puntos + @PuntosRecompensa,
+        Monedas = Monedas + @MonedasRecompensa
+    WHERE UsuarioId = @UsuarioId;
+
+    COMMIT TRANSACTION;
+
+    SELECT @Resultado AS Resultado, @PuntosRecompensa AS PuntosOtorgados, @MonedasRecompensa AS MonedasOtorgadas;
+END
+GO
+
+
+
+
+USE EcoRetosDB;
+GO
+
+CREATE OR ALTER PROCEDURE sp_Trivia_Responder
+    @UsuarioId            INT,
+    @PreguntaId           INT,
+    @OpcionSeleccionadaId INT,
+    @PuntosPorAcierto     INT = 10
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SET XACT_ABORT ON;
+
+    DECLARE @EsCorrecta BIT;
+    DECLARE @EsPrimerIntento BIT;
+    DECLARE @PuntosOtorgados INT = 0;
+    DECLARE @MonedasOtorgadas INT = 0;
+    DECLARE @Dificultad VARCHAR(20);
+
+    SET @EsPrimerIntento = CASE
+        WHEN EXISTS (SELECT 1 FROM TriviaAttempts WHERE UsuarioId = @UsuarioId AND PreguntaId = @PreguntaId)
+        THEN 0 ELSE 1
+    END;
+
+    SELECT @EsCorrecta = o.EsCorrecta, @Dificultad = c.Dificultad
+    FROM OpcionesPregunta o
+    INNER JOIN Preguntas p ON p.PreguntaId = o.PreguntaId
+    INNER JOIN CategoriasTrivia c ON c.CategoriaId = p.CategoriaId
+    WHERE o.OpcionId = @OpcionSeleccionadaId AND o.PreguntaId = @PreguntaId;
+
+    IF @EsCorrecta IS NULL
+    BEGIN
+        SELECT -1 AS Resultado, 0 AS PuntosOtorgados, 0 AS MonedasOtorgadas;
+        RETURN;
+    END
+
+    BEGIN TRANSACTION;
+
+    IF @EsCorrecta = 1 AND @EsPrimerIntento = 1
+    BEGIN
+        SET @PuntosOtorgados = @PuntosPorAcierto;
+        SET @MonedasOtorgadas = CASE @Dificultad
+            WHEN 'Facil' THEN 1
+            WHEN 'Intermedia' THEN 2
+            WHEN 'Dificil' THEN 3
+            ELSE 1
+        END;
+
+        UPDATE Usuarios
+        SET Puntos = Puntos + @PuntosOtorgados,
+            Monedas = Monedas + @MonedasOtorgadas
+        WHERE UsuarioId = @UsuarioId;
+    END
+
+    INSERT INTO TriviaAttempts (UsuarioId, PreguntaId, OpcionSeleccionadaId, EsCorrecta, RewardGranted, RewardedAt)
+    VALUES (
+        @UsuarioId, @PreguntaId, @OpcionSeleccionadaId, @EsCorrecta,
+        CASE WHEN @PuntosOtorgados > 0 THEN 1 ELSE 0 END,
+        CASE WHEN @PuntosOtorgados > 0 THEN SYSUTCDATETIME() ELSE NULL END
+    );
+
+    COMMIT TRANSACTION;
+
+    SELECT 1 AS Resultado, @EsCorrecta AS EsCorrecta, @PuntosOtorgados AS PuntosOtorgados, @MonedasOtorgadas AS MonedasOtorgadas;
+END
+GO

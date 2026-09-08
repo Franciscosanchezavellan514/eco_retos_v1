@@ -92,7 +92,8 @@ public class TriviaRepository
         return new ResultadoRespuestaInfo
         {
             EsCorrecta = reader.GetBoolean(reader.GetOrdinal("EsCorrecta")),
-            PuntosOtorgados = reader.GetInt32(reader.GetOrdinal("PuntosOtorgados"))
+            PuntosOtorgados = reader.GetInt32(reader.GetOrdinal("PuntosOtorgados")),
+            MonedasOtorgadas = reader.GetInt32(reader.GetOrdinal("MonedasOtorgadas"))
         };
     }
 
