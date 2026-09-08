@@ -22,17 +22,19 @@ public class JardinController : ControllerBase
         return int.Parse(User.FindFirst("UsuarioId")!.Value);
     }
 
-    [HttpPost("colocar")]
-    public IActionResult ColocarPlanta([FromBody] ColocarPlantaDto dto)
+    [HttpPost("comprar-colocar")]
+    public IActionResult ComprarYColocar([FromBody] ColocarPlantaDto dto)
     {
         var usuarioId = ObtenerUsuarioIdDelToken();
-        var resultado = _jardinService.ColocarPlanta(usuarioId, dto.NumeroSlot, dto.PlantaId);
+        var resultado = _jardinService.ComprarYColocar(usuarioId, dto.PlantaId, dto.NumeroSlot);
 
         return resultado switch
         {
-            1 => Ok(new { mensaje = "Planta colocada en el jardín." }),
-            -1 => BadRequest(new { mensaje = "No tienes esta planta desbloqueada. Cómprala primero en la tienda." }),
+            1 => Ok(new { mensaje = "¡Planta comprada y colocada en el jardín!" }),
+            -1 => NotFound(new { mensaje = "Esa planta no existe." }),
             -2 => BadRequest(new { mensaje = "Número de slot inválido." }),
+            -3 => BadRequest(new { mensaje = "Ese slot está bloqueado. Sube de nivel completando más retos y trivia." }),
+            -4 => BadRequest(new { mensaje = "No tienes suficientes monedas." }),
             _ => StatusCode(500, new { mensaje = "Error inesperado." })
         };
     }

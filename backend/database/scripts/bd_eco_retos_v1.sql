@@ -1629,3 +1629,93 @@ BEGIN
     SELECT 1 AS Resultado, @EsCorrecta AS EsCorrecta, @PuntosOtorgados AS PuntosOtorgados, @MonedasOtorgadas AS MonedasOtorgadas;
 END
 GO
+
+
+
+
+
+USE EcoRetosDB;
+GO
+
+CREATE OR ALTER PROCEDURE sp_Jardin_ComprarYColocar
+    @UsuarioId  INT,
+    @PlantaId   INT,
+    @NumeroSlot INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SET XACT_ABORT ON;
+
+    -- Resultado: 1 = éxito, -1 = planta no existe, -2 = slot fuera de rango absoluto,
+    -- -3 = slot bloqueado por nivel insuficiente, -4 = monedas insuficientes
+    DECLARE @Resultado INT = 1;
+    DECLARE @Precio INT;
+    DECLARE @Puntos INT;
+    DECLARE @Nivel INT;
+    DECLARE @SlotsDisponibles INT;
+
+    BEGIN TRANSACTION;
+
+    SELECT @Precio = PrecioMonedas FROM Plantas WHERE PlantaId = @PlantaId;
+
+    IF @Precio IS NULL
+    BEGIN
+        SET @Resultado = -1;
+        ROLLBACK TRANSACTION;
+        SELECT @Resultado AS Resultado;
+        RETURN;
+    END
+
+    IF @NumeroSlot < 1 OR @NumeroSlot > 15
+    BEGIN
+        SET @Resultado = -2;
+        ROLLBACK TRANSACTION;
+        SELECT @Resultado AS Resultado;
+        RETURN;
+    END
+
+    SELECT @Puntos = Puntos FROM Usuarios WHERE UsuarioId = @UsuarioId;
+    SET @Nivel = dbo.fn_CalcularNivel(@Puntos);
+    SET @SlotsDisponibles = @Nivel * 3;
+
+    IF @NumeroSlot > @SlotsDisponibles
+    BEGIN
+        SET @Resultado = -3;
+        ROLLBACK TRANSACTION;
+        SELECT @Resultado AS Resultado;
+        RETURN;
+    END
+
+    IF (SELECT Monedas FROM Usuarios WHERE UsuarioId = @UsuarioId) < @Precio
+    BEGIN
+        SET @Resultado = -4;
+        ROLLBACK TRANSACTION;
+        SELECT @Resultado AS Resultado;
+        RETURN;
+    END
+
+    UPDATE Usuarios SET Monedas = Monedas - @Precio WHERE UsuarioId = @UsuarioId;
+
+    IF EXISTS (SELECT 1 FROM JardinSlots WHERE UsuarioId = @UsuarioId AND NumeroSlot = @NumeroSlot)
+    BEGIN
+        UPDATE JardinSlots
+        SET PlantaId = @PlantaId, FechaColocacion = SYSUTCDATETIME()
+        WHERE UsuarioId = @UsuarioId AND NumeroSlot = @NumeroSlot;
+    END
+    ELSE
+    BEGIN
+        INSERT INTO JardinSlots (UsuarioId, NumeroSlot, PlantaId, FechaColocacion)
+        VALUES (@UsuarioId, @NumeroSlot, @PlantaId, SYSUTCDATETIME());
+    END
+
+    COMMIT TRANSACTION;
+
+    SELECT @Resultado AS Resultado;
+END
+GO
+
+
+
+
+
+

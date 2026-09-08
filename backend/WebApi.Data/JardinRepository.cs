@@ -15,19 +15,21 @@ public class JardinRepository
             ?? throw new InvalidOperationException("No se encontró la cadena de conexión 'EcoRetosDB'.");
     }
 
-    public int ColocarPlanta(int usuarioId, int numeroSlot, int plantaId)
+    public int ComprarYColocar(int usuarioId, int plantaId, int numeroSlot)
     {
         using var connection = new SqlConnection(_connectionString);
-        using var command = new SqlCommand("sp_Jardin_ColocarPlanta", connection);
+        using var command = new SqlCommand("sp_Jardin_ComprarYColocar", connection);
         command.CommandType = CommandType.StoredProcedure;
         command.Parameters.AddWithValue("@UsuarioId", usuarioId);
-        command.Parameters.AddWithValue("@NumeroSlot", numeroSlot);
         command.Parameters.AddWithValue("@PlantaId", plantaId);
+        command.Parameters.AddWithValue("@NumeroSlot", numeroSlot);
 
         connection.Open();
         var resultado = command.ExecuteScalar();
 
         return Convert.ToInt32(resultado);
+        // 1 = éxito, -1 = planta no existe, -2 = slot fuera de rango,
+        // -3 = slot bloqueado por nivel, -4 = monedas insuficientes
     }
 
     public List<JardinSlotInfo> VerEstado(int usuarioId)

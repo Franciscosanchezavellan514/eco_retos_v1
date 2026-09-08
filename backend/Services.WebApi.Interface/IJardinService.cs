@@ -4,6 +4,6 @@ namespace Services.WebApi.Interface;
 
 public interface IJardinService
 {
-    int ColocarPlanta(int usuarioId, int numeroSlot, int plantaId);
+    int ComprarYColocar(int usuarioId, int plantaId, int numeroSlot);
     List<JardinSlotInfo> VerEstado(int usuarioId);
 }

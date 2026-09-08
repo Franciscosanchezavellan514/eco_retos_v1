@@ -13,9 +13,9 @@ public class JardinService : IJardinService
         _jardinRepository = jardinRepository;
     }
 
-    public int ColocarPlanta(int usuarioId, int numeroSlot, int plantaId)
+    public int ComprarYColocar(int usuarioId, int plantaId, int numeroSlot)
     {
-        return _jardinRepository.ColocarPlanta(usuarioId, numeroSlot, plantaId);
+        return _jardinRepository.ComprarYColocar(usuarioId, plantaId, numeroSlot);
     }
 
     public List<JardinSlotInfo> VerEstado(int usuarioId)
