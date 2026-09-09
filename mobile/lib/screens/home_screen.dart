@@ -7,6 +7,7 @@ import 'login_screen.dart';
 import 'retos_screen.dart';
 import 'amigos_screen.dart';
 import 'jardin_screen.dart';
+import 'trivia_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -161,6 +162,12 @@ class _HomeScreenState extends State<HomeScreen> {
                         icono: Icons.recycling,
                         titulo: 'Retos Ambientales',
                         onTap: () => _navegarA(const RetosScreen()),
+                      ),
+                      const SizedBox(height: 10),
+                      _tarjetaMenu(
+                        icono: Icons.quiz,
+                        titulo: 'Trivia Eco',
+                        onTap: () => _navegarA(const TriviaScreen()),
                       ),
                       const SizedBox(height: 10),
                       _tarjetaMenu(
