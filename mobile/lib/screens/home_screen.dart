@@ -6,7 +6,6 @@ import '../theme/app_theme.dart';
 import 'login_screen.dart';
 import 'retos_screen.dart';
 import 'amigos_screen.dart';
-import 'tienda_screen.dart';
 import 'jardin_screen.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -168,12 +167,6 @@ class _HomeScreenState extends State<HomeScreen> {
                         icono: Icons.group,
                         titulo: 'Amigos',
                         onTap: () => _navegarA(const AmigosScreen()),
-                      ),
-                      const SizedBox(height: 10),
-                      _tarjetaMenu(
-                        icono: Icons.storefront,
-                        titulo: 'Tienda de Plantas',
-                        onTap: () => _navegarA(const TiendaScreen()),
                       ),
                       const SizedBox(height: 10),
                       _tarjetaMenu(

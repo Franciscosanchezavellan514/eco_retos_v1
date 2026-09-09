@@ -15,7 +15,10 @@ class JardinService {
     };
   }
 
-  Future<List<Planta>> listarTienda() async {
+  /// Lista el catálogo de plantas con sus precios (usado para mostrar
+  /// las opciones dentro del diálogo del Jardín, ya no hay pantalla
+  /// de Tienda separada).
+  Future<List<Planta>> listarCatalogo() async {
     final url = Uri.parse('$_baseUrl/Tienda/plantas');
     final response = await http.get(url, headers: await _headers());
 
@@ -24,13 +27,6 @@ class JardinService {
       return data.map((json) => Planta.fromJson(json)).toList();
     }
     return [];
-  }
-
-  Future<String> comprarPlanta(int plantaId) async {
-    final url = Uri.parse('$_baseUrl/Tienda/plantas/$plantaId/comprar');
-    final response = await http.post(url, headers: await _headers());
-    final data = jsonDecode(response.body);
-    return data['mensaje'] ?? 'Ocurrió un error.';
   }
 
   Future<List<JardinSlot>> verEstadoJardin() async {
@@ -44,12 +40,14 @@ class JardinService {
     return [];
   }
 
-  Future<String> colocarPlanta(int numeroSlot, int plantaId) async {
-    final url = Uri.parse('$_baseUrl/Jardin/colocar');
+  /// Compra y coloca la planta en un solo paso (cobra monedas cada vez,
+  /// no hay "desbloqueo" - igual que el prototipo original).
+  Future<String> comprarYColocar(int plantaId, int numeroSlot) async {
+    final url = Uri.parse('$_baseUrl/Jardin/comprar-colocar');
     final response = await http.post(
       url,
       headers: await _headers(),
-      body: jsonEncode({'numeroSlot': numeroSlot, 'plantaId': plantaId}),
+      body: jsonEncode({'plantaId': plantaId, 'numeroSlot': numeroSlot}),
     );
     final data = jsonDecode(response.body);
     return data['mensaje'] ?? 'Ocurrió un error.';

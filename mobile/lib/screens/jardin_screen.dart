@@ -13,7 +13,7 @@ class JardinScreen extends StatefulWidget {
 class _JardinScreenState extends State<JardinScreen> {
   final _jardinService = JardinService();
 
-  static const int _totalSlots = 12; // igual al límite definido en el backend
+  static const int _totalSlots = 15; // máximo absoluto (nivel 5)
 
   List<JardinSlot> _slots = [];
   bool _cargando = true;
@@ -43,12 +43,12 @@ class _JardinScreenState extends State<JardinScreen> {
   Future<void> _abrirSelectorDePlanta(int numeroSlot) async {
     final plantaId = await showDialog<int>(
       context: context,
-      builder: (context) => _DialogoElegirPlantaId(numeroSlot: numeroSlot),
+      builder: (context) => _DialogoElegirPlanta(numeroSlot: numeroSlot),
     );
 
     if (plantaId == null) return;
 
-    final mensaje = await _jardinService.colocarPlanta(numeroSlot, plantaId);
+    final mensaje = await _jardinService.comprarYColocar(plantaId, numeroSlot);
 
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(mensaje)));
@@ -121,18 +121,18 @@ class _JardinScreenState extends State<JardinScreen> {
   }
 }
 
-/// Diálogo simple para elegir qué planta colocar en el slot elegido.
-/// Muestra la tienda completa por ahora (más adelante se puede filtrar
-/// para mostrar solo las plantas que el usuario ya compró).
-class _DialogoElegirPlantaId extends StatefulWidget {
+/// Diálogo para elegir y comprar una planta para el slot elegido.
+/// Muestra el precio de cada una (fusiona lo que antes era la
+/// pantalla de "Tienda" por separado).
+class _DialogoElegirPlanta extends StatefulWidget {
   final int numeroSlot;
-  const _DialogoElegirPlantaId({required this.numeroSlot});
+  const _DialogoElegirPlanta({required this.numeroSlot});
 
   @override
-  State<_DialogoElegirPlantaId> createState() => _DialogoElegirPlantaIdState();
+  State<_DialogoElegirPlanta> createState() => _DialogoElegirPlantaState();
 }
 
-class _DialogoElegirPlantaIdState extends State<_DialogoElegirPlantaId> {
+class _DialogoElegirPlantaState extends State<_DialogoElegirPlanta> {
   final _jardinService = JardinService();
   List<Planta> _plantas = [];
   bool _cargando = true;
@@ -144,7 +144,7 @@ class _DialogoElegirPlantaIdState extends State<_DialogoElegirPlantaId> {
   }
 
   Future<void> _cargar() async {
-    final plantas = await _jardinService.listarTienda();
+    final plantas = await _jardinService.listarCatalogo();
     setState(() {
       _plantas = plantas;
       _cargando = false;
@@ -154,7 +154,7 @@ class _DialogoElegirPlantaIdState extends State<_DialogoElegirPlantaId> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: Text('Elegir planta para el slot ${widget.numeroSlot}'),
+      title: Text('Elegir planta - Slot ${widget.numeroSlot}'),
       content: SizedBox(
         width: double.maxFinite,
         child: _cargando
@@ -167,6 +167,17 @@ class _DialogoElegirPlantaIdState extends State<_DialogoElegirPlantaId> {
                   return ListTile(
                     leading: const Icon(Icons.local_florist, color: AppColors.primary),
                     title: Text(planta.nombre),
+                    trailing: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.monetization_on, color: AppColors.warning, size: 16),
+                        const SizedBox(width: 4),
+                        Text(
+                          '${planta.precioMonedas}',
+                          style: const TextStyle(fontWeight: FontWeight.w600),
+                        ),
+                      ],
+                    ),
                     onTap: () => Navigator.pop(context, planta.plantaId),
                   );
                 },
