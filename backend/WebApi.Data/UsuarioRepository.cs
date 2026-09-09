@@ -58,6 +58,8 @@ public class UsuarioRepository
             UltimaConexion = reader.IsDBNull(reader.GetOrdinal("UltimaConexion"))
                 ? null : reader.GetDateTime(reader.GetOrdinal("UltimaConexion")),
             RachaActual = reader.GetInt32(reader.GetOrdinal("RachaActual")),
+            MejorRacha = reader.GetInt32(reader.GetOrdinal("MejorRacha")),
+            DiasActivos = reader.GetInt32(reader.GetOrdinal("DiasActivos")),
             Puntos = reader.GetInt32(reader.GetOrdinal("Puntos")),
             Monedas = reader.GetInt32(reader.GetOrdinal("Monedas")),
             EsAdmin = reader.GetBoolean(reader.GetOrdinal("EsAdmin")),
@@ -92,11 +94,24 @@ public class UsuarioRepository
             UltimaConexion = reader.IsDBNull(reader.GetOrdinal("UltimaConexion"))
                 ? null : reader.GetDateTime(reader.GetOrdinal("UltimaConexion")),
             RachaActual = reader.GetInt32(reader.GetOrdinal("RachaActual")),
+            MejorRacha = reader.GetInt32(reader.GetOrdinal("MejorRacha")),
+            DiasActivos = reader.GetInt32(reader.GetOrdinal("DiasActivos")),
             Puntos = reader.GetInt32(reader.GetOrdinal("Puntos")),
             Monedas = reader.GetInt32(reader.GetOrdinal("Monedas")),
             EsAdmin = reader.GetBoolean(reader.GetOrdinal("EsAdmin")),
             Activo = reader.GetBoolean(reader.GetOrdinal("Activo")),
             Nivel = reader.GetInt32(reader.GetOrdinal("Nivel"))
         };
+    }
+
+    public void ActualizarRacha(int usuarioId)
+    {
+        using var connection = new SqlConnection(_connectionString);
+        using var command = new SqlCommand("sp_Usuario_ActualizarRacha", connection);
+        command.CommandType = CommandType.StoredProcedure;
+        command.Parameters.AddWithValue("@UsuarioId", usuarioId);
+
+        connection.Open();
+        command.ExecuteNonQuery();
     }
 }

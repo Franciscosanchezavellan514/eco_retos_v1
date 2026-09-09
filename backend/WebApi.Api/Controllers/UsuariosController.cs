@@ -1,6 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
-using System.Security.Claims;
 using Services.WebApi.Interface;
 using WebApi.Model.DTOs;
 
@@ -15,6 +14,11 @@ public class UsuariosController : ControllerBase
     public UsuariosController(IUsuarioService usuarioService)
     {
         _usuarioService = usuarioService;
+    }
+
+    private int ObtenerUsuarioIdDelToken()
+    {
+        return int.Parse(User.FindFirst("UsuarioId")!.Value);
     }
 
     [HttpPost("registrar")]
@@ -61,19 +65,14 @@ public class UsuariosController : ControllerBase
     [HttpGet("me")]
     public IActionResult Me()
     {
-        var usuarioId = User.FindFirst("UsuarioId")?.Value;
-        var uid = User.FindFirst("UID")?.Value;
-        var nombreUsuario = User.FindFirst(ClaimTypes.Name)?.Value;
-        var email = User.FindFirst(ClaimTypes.Email)?.Value;
-        var esAdmin = User.FindFirst("EsAdmin")?.Value;
+        var usuarioId = ObtenerUsuarioIdDelToken();
+        var perfil = _usuarioService.ObtenerPerfil(usuarioId);
 
-        return Ok(new
+        if (perfil == null)
         {
-            UsuarioId = usuarioId,
-            UID = uid,
-            NombreUsuario = nombreUsuario,
-            Email = email,
-            EsAdmin = esAdmin
-        });
+            return NotFound(new { mensaje = "Usuario no encontrado." });
+        }
+
+        return Ok(perfil);
     }
 }

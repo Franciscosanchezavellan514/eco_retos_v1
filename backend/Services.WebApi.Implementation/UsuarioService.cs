@@ -45,18 +45,29 @@ public class UsuarioService : IUsuarioService
             return null;
         }
 
-        bool passwordValido = BCrypt.Net.BCrypt.Verify(dto.Password, usuario.PasswordHash);
+        bool passwordValido = BCrypt.Net.BCrypt.Verify(
+            dto.Password,
+            usuario.PasswordHash
+        );
 
         if (!passwordValido)
         {
             return null;
         }
 
+        // Actualiza la racha ANTES de generar el token, para que el
+        // dato ya venga fresco si en el futuro se agrega al JWT o a la respuesta
+        _usuarioRepository.ActualizarRacha(usuario.UsuarioId);
+
         var token = _jwtService.GenerarToken(usuario);
         var refreshTokenPlano = GenerarRefreshTokenPlano();
         var refreshTokenHash = HashearToken(refreshTokenPlano);
 
-        _refreshTokenRepository.Crear(usuario.UsuarioId, refreshTokenHash, DateTime.UtcNow.AddDays(7));
+        _refreshTokenRepository.Crear(
+            usuario.UsuarioId,
+            refreshTokenHash,
+            DateTime.UtcNow.AddDays(7)
+        );
 
         return new LoginResponseDto
         {
@@ -75,7 +86,7 @@ public class UsuarioService : IUsuarioService
 
         if (tokenInfo == null)
         {
-            return null; // token inválido, expirado o ya revocado
+            return null;
         }
 
         var usuario = _usuarioRepository.ObtenerPorId(tokenInfo.UsuarioId);
@@ -85,14 +96,17 @@ public class UsuarioService : IUsuarioService
             return null;
         }
 
-        // Revoca el token viejo (rotation) y genera uno nuevo
         _refreshTokenRepository.Revocar(hash);
 
-        var nuevoToken = _jwtService.GenerarToken(usuario!);
+        var nuevoToken = _jwtService.GenerarToken(usuario);
         var nuevoRefreshPlano = GenerarRefreshTokenPlano();
         var nuevoRefreshHash = HashearToken(nuevoRefreshPlano);
 
-        _refreshTokenRepository.Crear(usuario!.UsuarioId, nuevoRefreshHash, DateTime.UtcNow.AddDays(7));
+        _refreshTokenRepository.Crear(
+            usuario.UsuarioId,
+            nuevoRefreshHash,
+            DateTime.UtcNow.AddDays(7)
+        );
 
         return new LoginResponseDto
         {
@@ -108,6 +122,31 @@ public class UsuarioService : IUsuarioService
     {
         var hash = HashearToken(refreshTokenPlano);
         _refreshTokenRepository.Revocar(hash);
+    }
+
+    public PerfilDto? ObtenerPerfil(int usuarioId)
+    {
+        var usuario = _usuarioRepository.ObtenerPorId(usuarioId);
+
+        if (usuario == null)
+        {
+            return null;
+        }
+
+        return new PerfilDto
+        {
+            UsuarioId = usuario.UsuarioId,
+            UID = usuario.UID,
+            NombreUsuario = usuario.NombreUsuario,
+            Email = usuario.Email,
+            Puntos = usuario.Puntos,
+            Monedas = usuario.Monedas,
+            Nivel = usuario.Nivel,
+            RachaActual = usuario.RachaActual,
+            MejorRacha = usuario.MejorRacha,
+            DiasActivos = usuario.DiasActivos,
+            FechaRegistro = usuario.FechaRegistro
+        };
     }
 
     private string GenerarUidUnico()

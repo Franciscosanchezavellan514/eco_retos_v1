@@ -1715,7 +1715,104 @@ END
 GO
 
 
+USE EcoRetosDB;
+GO
+
+ALTER TABLE Usuarios
+ADD MejorRacha INT NOT NULL DEFAULT 0,
+    DiasActivos INT NOT NULL DEFAULT 0;
+GO
+
+
+USE EcoRetosDB;
+GO
+
+CREATE OR ALTER PROCEDURE sp_Usuario_ActualizarRacha
+    @UsuarioId INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    DECLARE @UltimaConexion DATETIME2;
+    DECLARE @HoyUtc DATE = CAST(SYSUTCDATETIME() AS DATE);
+    DECLARE @UltimaConexionFecha DATE;
+    DECLARE @RachaActual INT;
+    DECLARE @MejorRacha INT;
+
+    SELECT @UltimaConexion = UltimaConexion, @RachaActual = RachaActual, @MejorRacha = MejorRacha
+    FROM Usuarios WHERE UsuarioId = @UsuarioId;
+
+    SET @UltimaConexionFecha = CAST(@UltimaConexion AS DATE);
+
+    -- Primera conexión de la vida del usuario (UltimaConexion es NULL)
+    IF @UltimaConexion IS NULL
+    BEGIN
+        UPDATE Usuarios
+        SET RachaActual = 1,
+            MejorRacha = CASE WHEN 1 > @MejorRacha THEN 1 ELSE @MejorRacha END,
+            DiasActivos = DiasActivos + 1,
+            UltimaConexion = SYSUTCDATETIME()
+        WHERE UsuarioId = @UsuarioId;
+        RETURN;
+    END
+
+    -- Ya entró hoy antes: no hace nada (evita inflar racha con logins múltiples el mismo día)
+    IF @UltimaConexionFecha = @HoyUtc
+    BEGIN
+        RETURN;
+    END
+
+    -- Entró ayer: sube la racha
+    IF @UltimaConexionFecha = DATEADD(DAY, -1, @HoyUtc)
+    BEGIN
+        SET @RachaActual = @RachaActual + 1;
+    END
+    ELSE
+    BEGIN
+        -- Pasó más de 1 día sin entrar: se reinicia la racha
+        SET @RachaActual = 1;
+    END
+
+    UPDATE Usuarios
+    SET RachaActual = @RachaActual,
+        MejorRacha = CASE WHEN @RachaActual > @MejorRacha THEN @RachaActual ELSE @MejorRacha END,
+        DiasActivos = DiasActivos + 1,
+        UltimaConexion = SYSUTCDATETIME()
+    WHERE UsuarioId = @UsuarioId;
+END
+GO
 
 
 
+USE EcoRetosDB;
+GO
 
+CREATE OR ALTER PROCEDURE sp_Usuario_ObtenerPorId
+    @UsuarioId INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    SELECT UsuarioId, UID, NombreUsuario, Email, PasswordHash,
+           FechaRegistro, UltimaConexion, RachaActual, MejorRacha, DiasActivos,
+           Puntos, Monedas, EsAdmin, Activo,
+           dbo.fn_CalcularNivel(Puntos) AS Nivel
+    FROM Usuarios
+    WHERE UsuarioId = @UsuarioId;
+END
+GO
+
+CREATE OR ALTER PROCEDURE sp_Usuario_ObtenerPorEmail
+    @Email NVARCHAR(150)
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    SELECT UsuarioId, UID, NombreUsuario, Email, PasswordHash,
+           FechaRegistro, UltimaConexion, RachaActual, MejorRacha, DiasActivos,
+           Puntos, Monedas, EsAdmin, Activo,
+           dbo.fn_CalcularNivel(Puntos) AS Nivel
+    FROM Usuarios
+    WHERE Email = @Email;
+END
+GO

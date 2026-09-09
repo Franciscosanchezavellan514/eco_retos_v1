@@ -10,6 +10,8 @@ public class Usuario
     public DateTime FechaRegistro { get; set; }
     public DateTime? UltimaConexion { get; set; }
     public int RachaActual { get; set; }
+    public int MejorRacha { get; set; }
+    public int DiasActivos { get; set; }
     public int Puntos { get; set; }
     public int Monedas { get; set; }
     public bool EsAdmin { get; set; }
