@@ -9,6 +9,7 @@ import 'amigos_screen.dart';
 import 'jardin_screen.dart';
 import 'trivia_screen.dart';
 import 'muro_screen.dart';
+import 'perfil_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -187,6 +188,12 @@ class _HomeScreenState extends State<HomeScreen> {
                         icono: Icons.grass,
                         titulo: 'Mi Jardín',
                         onTap: () => _navegarA(const JardinScreen()),
+                      ),
+                      const SizedBox(height: 10),
+                      _tarjetaMenu(
+                        icono: Icons.person,
+                        titulo: 'Mi Perfil',
+                        onTap: () => _navegarA(const PerfilScreen()),
                       ),
                     ],
                   ),
