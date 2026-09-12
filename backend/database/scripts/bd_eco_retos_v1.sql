@@ -1816,3 +1816,75 @@ BEGIN
     WHERE Email = @Email;
 END
 GO
+
+
+
+USE EcoRetosDB;
+GO
+
+CREATE OR ALTER PROCEDURE sp_Reto_ContarCompletados
+    @UsuarioId INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SELECT COUNT(*) AS Total FROM UsuarioRetos WHERE UsuarioId = @UsuarioId;
+END
+GO
+
+
+USE EcoRetosDB;
+GO
+
+CREATE OR ALTER PROCEDURE sp_Trivia_ContarCorrectasDistintas
+    @UsuarioId INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SELECT COUNT(DISTINCT PreguntaId) AS Total
+    FROM TriviaAttempts
+    WHERE UsuarioId = @UsuarioId AND EsCorrecta = 1;
+END
+GO
+
+
+
+USE EcoRetosDB;
+GO
+
+CREATE OR ALTER PROCEDURE sp_Insignia_EvaluarYOtorgar
+    @UsuarioId INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    DECLARE @RetosCompletados INT;
+    DECLARE @TriviasCorrectas INT;
+
+    SELECT @RetosCompletados = COUNT(*) FROM UsuarioRetos WHERE UsuarioId = @UsuarioId;
+    SELECT @TriviasCorrectas = COUNT(DISTINCT PreguntaId) FROM TriviaAttempts WHERE UsuarioId = @UsuarioId AND EsCorrecta = 1;
+
+    -- Insignia "Primer Reto" (InsigniaId 1): al completar 1 o más retos
+    IF @RetosCompletados >= 1 AND NOT EXISTS (
+        SELECT 1 FROM UsuarioInsignias WHERE UsuarioId = @UsuarioId AND InsigniaId = 1
+    )
+    BEGIN
+        INSERT INTO UsuarioInsignias (UsuarioId, InsigniaId) VALUES (@UsuarioId, 1);
+    END
+
+    -- Insignia "Reciclador Experto" (InsigniaId 2): al completar 10 o más retos
+    IF @RetosCompletados >= 10 AND NOT EXISTS (
+        SELECT 1 FROM UsuarioInsignias WHERE UsuarioId = @UsuarioId AND InsigniaId = 2
+    )
+    BEGIN
+        INSERT INTO UsuarioInsignias (UsuarioId, InsigniaId) VALUES (@UsuarioId, 2);
+    END
+
+    -- Insignia "Cerebrito Verde" (InsigniaId 3): al acertar 5 o más preguntas de trivia
+    IF @TriviasCorrectas >= 5 AND NOT EXISTS (
+        SELECT 1 FROM UsuarioInsignias WHERE UsuarioId = @UsuarioId AND InsigniaId = 3
+    )
+    BEGIN
+        INSERT INTO UsuarioInsignias (UsuarioId, InsigniaId) VALUES (@UsuarioId, 3);
+    END
+END
+GO

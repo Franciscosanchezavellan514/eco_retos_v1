@@ -57,4 +57,15 @@ public class InsigniaRepository
 
         return insignias;
     }
+
+    public void EvaluarYOtorgar(int usuarioId)
+    {
+        using var connection = new SqlConnection(_connectionString);
+        using var command = new SqlCommand("sp_Insignia_EvaluarYOtorgar", connection);
+        command.CommandType = CommandType.StoredProcedure;
+        command.Parameters.AddWithValue("@UsuarioId", usuarioId);
+
+        connection.Open();
+        command.ExecuteNonQuery();
+    }
 }

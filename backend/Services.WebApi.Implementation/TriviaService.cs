@@ -7,10 +7,12 @@ namespace Services.WebApi.Implementation;
 public class TriviaService : ITriviaService
 {
     private readonly TriviaRepository _triviaRepository;
+    private readonly InsigniaRepository _insigniaRepository;
 
-    public TriviaService(TriviaRepository triviaRepository)
+    public TriviaService(TriviaRepository triviaRepository, InsigniaRepository insigniaRepository)
     {
         _triviaRepository = triviaRepository;
+        _insigniaRepository = insigniaRepository;
     }
 
     public List<CategoriaTriviaInfo> ListarCategorias()
@@ -27,8 +29,13 @@ public class TriviaService : ITriviaService
     {
         var resultado = _triviaRepository.Responder(usuarioId, preguntaId, opcionId);
 
-        // Después de cada respuesta, actualizamos el resumen de mejor puntaje
         _triviaRepository.ActualizarMejorPuntaje(usuarioId, categoriaId);
+
+        // Solo evaluamos insignias si realmente otorgó puntos (fue correcta Y primer intento)
+        if (resultado.PuntosOtorgados > 0)
+        {
+            _insigniaRepository.EvaluarYOtorgar(usuarioId);
+        }
 
         return resultado;
     }
