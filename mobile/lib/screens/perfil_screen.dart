@@ -4,6 +4,7 @@ import '../services/session_service.dart';
 import '../services/usuario_service.dart';
 import '../theme/app_theme.dart';
 import 'login_screen.dart';
+import 'insignias_screen.dart';
 
 class PerfilScreen extends StatefulWidget {
   const PerfilScreen({super.key});
@@ -45,6 +46,13 @@ class _PerfilScreenState extends State<PerfilScreen> {
     }
   }
 
+  void _irAInsignias() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const InsigniasScreen()),
+    );
+  }
+
   Widget _estadisticaChica(IconData icono, String valor, String etiqueta, Color color) {
     return Column(
       children: [
@@ -82,7 +90,6 @@ class _PerfilScreenState extends State<PerfilScreen> {
           padding: const EdgeInsets.all(20),
           child: Column(
             children: [
-              // --- Avatar y datos básicos ---
               Container(
                 width: 96,
                 height: 96,
@@ -103,7 +110,6 @@ class _PerfilScreenState extends State<PerfilScreen> {
 
               const SizedBox(height: 24),
 
-              // --- Nivel y progreso ---
               Container(
                 width: double.infinity,
                 padding: const EdgeInsets.all(18),
@@ -152,7 +158,6 @@ class _PerfilScreenState extends State<PerfilScreen> {
 
               const SizedBox(height: 16),
 
-              // --- XP y Monedas ---
               Row(
                 children: [
                   Expanded(
@@ -197,7 +202,6 @@ class _PerfilScreenState extends State<PerfilScreen> {
 
               const SizedBox(height: 16),
 
-              // --- Racha ---
               Container(
                 width: double.infinity,
                 padding: const EdgeInsets.all(18),
@@ -219,6 +223,31 @@ class _PerfilScreenState extends State<PerfilScreen> {
                       ],
                     ),
                   ],
+                ),
+              ),
+
+              const SizedBox(height: 16),
+
+              GestureDetector(
+                onTap: _irAInsignias,
+                child: Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: AppColors.surfaceSoft, width: 1.5),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.emoji_events, color: AppColors.warning, size: 28),
+                      const SizedBox(width: 14),
+                      const Expanded(
+                        child: Text('Mi Colección', style: TextStyle(fontWeight: FontWeight.w600)),
+                      ),
+                      const Icon(Icons.chevron_right, color: AppColors.textMuted),
+                    ],
+                  ),
                 ),
               ),
 
