@@ -1,18 +1,12 @@
 import 'dart:convert';
-import 'package:http/http.dart' as http;
 import '../models/insignia.dart';
-import 'session_service.dart';
+import 'api_client.dart';
 
 class InsigniaService {
-  static const String _baseUrl = 'http://localhost:5010/api';
-  final _sessionService = SessionService();
+  final _apiClient = ApiClient();
 
   Future<List<Insignia>> listarMisInsignias() async {
-    final token = await _sessionService.obtenerToken();
-    if (token == null) return [];
-
-    final url = Uri.parse('$_baseUrl/Insignias/mis-insignias');
-    final response = await http.get(url, headers: {'Authorization': 'Bearer $token'});
+    final response = await _apiClient.get('/Insignias/mis-insignias');
 
     if (response.statusCode == 200) {
       final List<dynamic> data = jsonDecode(response.body);

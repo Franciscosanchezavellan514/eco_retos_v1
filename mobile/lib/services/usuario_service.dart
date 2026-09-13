@@ -1,22 +1,12 @@
 import 'dart:convert';
-import 'package:http/http.dart' as http;
 import '../models/usuario_perfil.dart';
-import 'session_service.dart';
+import 'api_client.dart';
 
 class UsuarioService {
-  static const String _baseUrl = 'http://localhost:5010/api';
-  final _sessionService = SessionService();
+  final _apiClient = ApiClient();
 
   Future<UsuarioPerfil?> obtenerMiPerfil() async {
-    final token = await _sessionService.obtenerToken();
-    if (token == null) return null;
-
-    final url = Uri.parse('$_baseUrl/Usuarios/me');
-
-    final response = await http.get(
-      url,
-      headers: {'Authorization': 'Bearer $token'},
-    );
+    final response = await _apiClient.get('/Usuarios/me');
 
     if (response.statusCode == 200) {
       final data = jsonDecode(response.body);
