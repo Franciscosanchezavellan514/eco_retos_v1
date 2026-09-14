@@ -1890,3 +1890,30 @@ END
 GO
 
 
+USE EcoRetosDB;
+GO
+
+CREATE OR ALTER PROCEDURE sp_Reto_ListarActivosConMateriales
+    @UsuarioId INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    SELECT
+        r.RetoId,
+        r.Titulo,
+        r.Descripcion,
+        r.PuntosRecompensa,
+        r.Dificultad,
+        m.MaterialId,
+        m.Nombre AS NombreMaterial,
+        rm.CantidadRequerida,
+        ISNULL(um.Cantidad, 0) AS CantidadDisponible
+    FROM Retos r
+    INNER JOIN RetoMateriales rm ON rm.RetoId = r.RetoId
+    INNER JOIN Materiales m ON m.MaterialId = rm.MaterialId
+    LEFT JOIN UsuarioMateriales um ON um.MaterialId = rm.MaterialId AND um.UsuarioId = @UsuarioId
+    WHERE r.Activo = 1
+    ORDER BY r.RetoId, m.MaterialId;
+END
+GO

@@ -28,6 +28,14 @@ public class RetosController : ControllerBase
         return Ok(retos);
     }
 
+    [HttpGet("activos-con-materiales")]
+    public IActionResult ListarActivosConMateriales()
+    {
+        var usuarioId = ObtenerUsuarioIdDelToken();
+        var retos = _retoService.ListarActivosConMateriales(usuarioId);
+        return Ok(retos);
+    }
+
     [HttpPost("{retoId}/completar")]
     public IActionResult Completar(int retoId)
     {

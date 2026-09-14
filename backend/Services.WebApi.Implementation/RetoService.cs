@@ -20,11 +20,15 @@ public class RetoService : IRetoService
         return _retoRepository.ListarActivos();
     }
 
+    public List<RetoConMaterialesInfo> ListarActivosConMateriales(int usuarioId)
+    {
+        return _retoRepository.ListarActivosConMateriales(usuarioId);
+    }
+
     public ResultadoCompletarReto Completar(int usuarioId, int retoId)
     {
         var resultado = _retoRepository.Completar(usuarioId, retoId);
 
-        // Solo evaluamos insignias si el reto se completó con éxito de verdad
         if (resultado.Resultado == 1)
         {
             _insigniaRepository.EvaluarYOtorgar(usuarioId);

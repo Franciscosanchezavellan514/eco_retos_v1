@@ -41,6 +41,47 @@ public class RetoRepository
         return retos;
     }
 
+    public List<RetoConMaterialesInfo> ListarActivosConMateriales(int usuarioId)
+    {
+        var retosDict = new Dictionary<int, RetoConMaterialesInfo>();
+
+        using var connection = new SqlConnection(_connectionString);
+        using var command = new SqlCommand("sp_Reto_ListarActivosConMateriales", connection);
+        command.CommandType = CommandType.StoredProcedure;
+        command.Parameters.AddWithValue("@UsuarioId", usuarioId);
+
+        connection.Open();
+        using var reader = command.ExecuteReader();
+
+        while (reader.Read())
+        {
+            var retoId = reader.GetInt32(reader.GetOrdinal("RetoId"));
+
+            if (!retosDict.TryGetValue(retoId, out var reto))
+            {
+                reto = new RetoConMaterialesInfo
+                {
+                    RetoId = retoId,
+                    Titulo = reader.GetString(reader.GetOrdinal("Titulo")),
+                    Descripcion = reader.GetString(reader.GetOrdinal("Descripcion")),
+                    PuntosRecompensa = reader.GetInt32(reader.GetOrdinal("PuntosRecompensa")),
+                    Dificultad = reader.GetString(reader.GetOrdinal("Dificultad"))
+                };
+                retosDict[retoId] = reto;
+            }
+
+            reto.Materiales.Add(new MaterialRequeridoInfo
+            {
+                MaterialId = reader.GetInt32(reader.GetOrdinal("MaterialId")),
+                NombreMaterial = reader.GetString(reader.GetOrdinal("NombreMaterial")),
+                CantidadRequerida = reader.GetInt32(reader.GetOrdinal("CantidadRequerida")),
+                CantidadDisponible = reader.GetInt32(reader.GetOrdinal("CantidadDisponible"))
+            });
+        }
+
+        return retosDict.Values.ToList();
+    }
+
     public ResultadoCompletarReto Completar(int usuarioId, int retoId)
     {
         using var connection = new SqlConnection(_connectionString);
