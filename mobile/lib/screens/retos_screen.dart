@@ -40,10 +40,6 @@ class _RetosScreenState extends State<RetosScreen> {
       );
     }
 
-    // Recargamos la lista después de intentar completar,
-    // por si el estado del usuario cambió (aunque la lista de retos
-    // activos en sí no cambia, esto prepara el patrón para cuando
-    // filtremos "ya completados" más adelante)
     _cargarRetos();
   }
 
@@ -133,6 +129,39 @@ class _RetosScreenState extends State<RetosScreen> {
                                 style: TextStyle(color: AppColors.textMuted, fontSize: 13),
                               ),
                               const SizedBox(height: 12),
+
+                              // --- Materiales requeridos con progreso ---
+                              Text(
+                                'Materiales requeridos',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 12,
+                                  color: AppColors.textPrimary,
+                                ),
+                              ),
+                              const SizedBox(height: 6),
+                              ...reto.materiales.map((m) => Padding(
+                                    padding: const EdgeInsets.only(bottom: 4),
+                                    child: Row(
+                                      children: [
+                                        Icon(
+                                          m.cumple ? Icons.check_circle : Icons.cancel,
+                                          size: 14,
+                                          color: m.cumple ? AppColors.primary : AppColors.danger,
+                                        ),
+                                        const SizedBox(width: 6),
+                                        Text(
+                                          '${m.nombreMaterial} ${m.cantidadDisponible}/${m.cantidadRequerida}',
+                                          style: TextStyle(
+                                            fontSize: 12,
+                                            color: m.cumple ? AppColors.textPrimary : AppColors.textMuted,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  )),
+
+                              const SizedBox(height: 12),
                               Row(
                                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                 children: [
@@ -150,11 +179,20 @@ class _RetosScreenState extends State<RetosScreen> {
                                     ],
                                   ),
                                   ElevatedButton(
-                                    onPressed: () => _completarReto(reto),
+                                    // Botón deshabilitado (null) si aún faltan materiales
+                                    onPressed: reto.puedeCompletarse ? () => _completarReto(reto) : null,
                                     style: ElevatedButton.styleFrom(
                                       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                                      backgroundColor: reto.puedeCompletarse ? AppColors.primary : AppColors.surfaceSoft,
+                                      disabledBackgroundColor: AppColors.surfaceSoft,
                                     ),
-                                    child: const Text('Completar', style: TextStyle(fontSize: 13)),
+                                    child: Text(
+                                      reto.puedeCompletarse ? 'Completar' : 'Faltan materiales',
+                                      style: TextStyle(
+                                        fontSize: 13,
+                                        color: reto.puedeCompletarse ? Colors.white : AppColors.textMuted,
+                                      ),
+                                    ),
                                   ),
                                 ],
                               ),

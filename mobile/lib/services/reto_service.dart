@@ -6,7 +6,7 @@ class RetoService {
   final _apiClient = ApiClient();
 
   Future<List<Reto>> listarActivos() async {
-    final response = await _apiClient.get('/Retos/activos');
+    final response = await _apiClient.get('/Retos/activos-con-materiales');
 
     if (response.statusCode == 200) {
       final List<dynamic> data = jsonDecode(response.body);
